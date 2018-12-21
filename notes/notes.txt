@@ -1,0 +1,743 @@
+    let diffRibs param body occs =
+      let getVar param occ =
+
+      let ribsIter param body occs idx =
+        let curr = List.nth occs idx in
+        let rest = List.filter (fun occ -> occ != curr) occs in
+        let var = getVar param curr in
+        match var with
+          | VarParam v -> 
+          | VarBound v ->
+
+
+              let diffRibs param body occs =
+      let getType param occ =
+        match occ with
+        | Var' var ->   
+          match var with
+            | VarParam(name, pos) -> 'p'
+            | VarBound(name, depth, pos) -> 'b'
+        | _ -> X_not_yet_implemeted
+        (* rest of expr' .. *)
+
+         let first = List.nth occs 0 in
+      let second = List.nth occs 1 in
+      getType param first != getType param second
+
+
+
+
+      
+    (* Return (body, ansentor) if it has write occ' of param *)
+    let getWrites param body = 
+      (* Return true if has write occ' *)
+      let isWrite param body = (getWrites != [])
+      in
+      match body with
+      (* Base case, if body match Set' and var = param => body, else => [] *)
+      | Set'(Var' var, value) ->
+        match var with
+          | VarParam(name, pos) | VarBound(name, depth, pos) -> if param = name then body else []
+      (* Check write in all exprs *)
+      | Seq' exprs -> if (List.filter (fun expr -> isWrite param expr) exprs) != [] then body else []
+      (* Check write recursively in bodies *)
+      | LambdaSimple'(params, currBody) | LambdaOpt'(params, op, currBody) -> if isWrite param currBody then body else []
+      | _ -> []
+    in
+
+    (* Return true if occ's list contains occurrences of different ribs *)
+    let diffRibs param body occs = X_not_yet_implemented in
+
+    (* Reads & Writes closures *)
+    let reads = getReads param body in
+    let writes = getWrites param body in
+    (* Filter reads, return all reads that not occur in write *)
+    let readsDiff = List.filter (fun read -> not (List.mem read writes)) reads in
+    (* Filter writes, return all writes that not occur in read *)
+    let writesDiff = List.filter (fun write -> not (List.mem write reads)) writes in
+    (* let occs = readsDiff @ writesDiff in *)
+    (* List.exist (not sameRib) diff *)
+    (* diffRibs param body occs *)
+
+
+
+
+
+
+
+    SAVE IT !
+
+    
+        (* Return body if it has read occ' of param *)
+    (* Idea: return Pair(body, ancestor) => ability to compare ancestors *)
+    let rec getReads param body = 
+      (* Return true if has read occ' *)
+      let isRead param body = (getReads param body) != [] in
+      let getAncestor param body = raise X_not_yet_implemented in
+      let ancestor = getAncestor param body in
+      (match body with
+        (* Base case, body match var and var = param => body, else => [] *)
+        | Var' var ->
+          (match var with
+            | VarParam(name, pos) -> if param = name then [body] else []
+            | VarBound(name, depth, pos) -> if param = name then [body] else []
+            | _ -> [])
+        (* Check reads in values *)
+        | Set'(var, value) -> if isRead param value then [body] else []
+        | Def'(name, value) -> if isRead param value then [body] else []
+        (* Check reads in all exprs *)
+        | Or' exprs -> if (List.filter (fun expr -> isRead param expr) exprs) != [] then [body] else []
+        | If'(test, dit, dif) -> if (isRead param test) || (isRead param dit) || (isRead param dif) then [body] else []
+        | Seq' exprs -> if (List.filter (fun expr -> isRead param expr) exprs) != [] then [body] else []
+        (* Check reads in exprs *)
+        | Applic'(op, exprs) | ApplicTP'(op, exprs) -> if (List.filter (fun expr -> isRead param expr) exprs) != [] then [body] else []
+        (* Check reads recursively in bodies *)
+        | LambdaSimple'(params, currBody) -> if isRead param currBody then [body] else []
+        | LambdaOpt'(params, op, currBody) -> if isRead param currBody then [body] else []
+        | _ -> [])
+    in
+
+    (* Return (body, ansentor) if it has write occ' of param *)
+    let rec getWrites param body = 
+      (* Return true if has write occ' *)
+      let isWrite param body = (getWrites param body != []) in
+      (match body with
+        (* Base case, if body match Set' and var = param => body, else => [] *)
+        | Set'(Var' var, value) ->
+          (match var with
+            | VarParam(name, pos) -> if param = name then [body] else []
+            | VarBound(name, depth, pos) -> if param = name then [body] else [])
+        (* Check write in all exprs *)
+        | Seq' exprs -> if (List.filter (fun expr -> isWrite param expr) exprs) != [] then [body] else []
+        (* Check write recursively in bodies *)
+        | LambdaSimple'(params, currBody) -> if isWrite param currBody then [body] else []
+        | LambdaOpt'(params, op, currBody) -> if isWrite param currBody then [body] else []
+        | _ -> [])
+    in
+
+    (* Return true if occ's list contains occurrences of different ribs *)
+    let diffRibs param body occs = X_not_yet_implemented in
+
+    (* Reads & Writes closures *)
+    let reads = getReads param body in
+    let writes = getWrites param body in
+    (* Filter reads, return all reads that not occur in write *)
+    let readsDiff = List.filter (fun read -> not (List.mem read writes)) reads in
+    (* Filter writes, return all writes that not occur in read *)
+    let writesDiff = List.filter (fun write -> not (List.mem write reads)) writes in
+    diffRibs param body (readsDiff @ writesDiff)
+  in
+
+
+
+
+    (* let repSet param body = 
+    match body with
+      | Set'(Var'(VarParam(v, pos)), value) -> if param = v then BoxSet'(VarParam(v, pos), value) else body
+      | Set'(Var'(VarBound(v, depth, pos)), value) -> if param = v then BoxSet'(VarBound(v, depth, pos), value) else body
+      | _ -> body
+  in *)
+
+
+    (* let repGet param body = 
+    match body with
+      | Var' (VarParam(v, pos)) -> if param = v then BoxGet'(VarParam(v, pos)) else body
+      | Var' (VarBound(v, depth, pos)) -> if param = v then BoxGet'(VarBound(v, depth, pos)) else body
+      | _ -> body
+  in *)
+
+
+
+***********
+
+
+  9.12
+
+
+  let box_set e = 
+  
+  (* TODO: check pos of param *)
+  let addSet param body =
+    match body with
+      | Seq' exprs -> Seq' ([Set' (Var' (VarParam(param, 0)), Box' (VarParam(param, 0)))] @ exprs)
+      | _ -> Seq' [Set' (Var' (VarParam(param, 0)), Box' (VarParam(param, 0))); body]
+  in
+
+  (* Replace set occur's of param in body *)
+  let rec repGet param body = 
+    match body with
+      (* Base case *)
+      | Var' (VarParam(v, pos)) -> if param = v then BoxGet'(VarParam(v, pos)) else body
+      | Var' (VarBound(v, depth, pos)) -> if param = v then BoxGet'(VarBound(v, depth, pos)) else body
+      (* Replace values *)
+      | Set'(var, value) -> Set'(repGet param var, repGet param value)
+      | Def'(name, value) -> Def'(name, repGet param value)
+      | BoxSet' (var, value) -> BoxSet' (var, repGet param value)
+      (* Replace all exprs *)
+      | Or' exprs -> Or'(List.map (fun expr -> repGet param expr) exprs)
+      | If'(test, dit, dif) -> If'(repGet param test, repGet param dit, repGet param dif)
+      | Seq' exprs -> Seq' (List.map (fun expr -> repGet param expr) exprs)
+      (* Replace exprs *)
+      | Applic'(op, exprs) -> Applic'(repGet param op, (List.map (fun expr -> repGet param expr) exprs))
+      | ApplicTP'(op, exprs) -> ApplicTP'(repGet param op, (List.map (fun expr -> repGet param expr) exprs))
+      (* Replace bodies recursively *)
+      | LambdaSimple'(params, currBody) -> if (List.mem param params) then LambdaSimple' (params, currBody) 
+                                                                      else LambdaSimple' (params, repGet param currBody)
+      | LambdaOpt'(params, op, currBody) -> if (List.mem param (op :: params)) then LambdaOpt' (params, op, currBody) 
+                                                                               else LambdaOpt'(params, op, repGet param currBody)
+      | _ -> body 
+  in
+
+  (* Replace get occur's of param in body *)
+  let rec repSet param body = 
+    match body with
+      | Set' (Var'(VarParam(v, pos)), value) -> if param = v then BoxSet'(VarParam(v, pos), repSet param value) 
+                                                else Set' (Var' (VarParam (v, pos)), repSet param value)
+      | Set' (Var'(VarBound(v, depth, pos)), value) -> if param = v then BoxSet'(VarBound(v, depth, pos), repSet param value) 
+                                                                    else Set' (Var' (VarBound (v, depth, pos)), repSet param value)
+      | Set' (Var' v, value) -> Set' (Var' v, repSet param value)
+      | BoxSet' (var, value) -> BoxSet' (var, repSet param value)
+      | If' (test, dit, dif) -> If' (repSet param test, repSet param dit, repSet param dif)
+      | Def' (name, value) -> Def' (name, repSet param value)
+      | Seq' exprs -> Seq' (List.map (repSet param) exprs)
+      | Or' exprs -> Or' (List.map (repSet param) exprs)
+      | Applic'(op, exprs) -> Applic'	(repSet param op, List.map (repSet param) exprs)
+      | ApplicTP'(op, exprs) -> ApplicTP' (repSet param op, List.map (repSet param) exprs)
+      | LambdaSimple' (params, body) -> if (List.mem param params) then LambdaSimple' (params, body) 
+                                                                   else LambdaSimple' (params, repSet param body)
+      | LambdaOpt' (params, op, body) -> if (List.mem param (op :: params)) then LambdaOpt' (params, op, body) 
+                                                                            else LambdaOpt' (params, op, repSet param body)
+      | _ -> body 
+  in
+
+  (* Got body, toBox list -> return boxed body *)
+  let boxThem body toBox =
+    let set = List.fold_right (fun param currBody -> repSet param currBody) toBox body in
+    let get = List.fold_right (fun param currBody -> repGet param currBody) toBox set in
+    let aset = List.fold_right (fun param currBody -> addSet param currBody) toBox get in aset
+  in
+
+  (* Return read expr' list if exist, and [Const' Void] otherwise *)
+  let rec read param body =
+    match body with
+      | Var'(VarParam(v, pos)) -> if param = v then [body] else [Const' Void]
+      | Var'(VarBound(v, depth, pos)) -> if param = v then [body] else [Const' Void]
+      | LambdaSimple' (params, currBody) -> read param currBody
+      | Applic'(op, exprs) -> read param op @ List.flatten (List.map (fun expr -> read param expr) exprs)
+      | ApplicTP'(op, exprs) -> read param op @ List.flatten (List.map (fun expr -> read param expr) exprs)
+      | _ -> [Const' Void]
+  in
+
+  (* Return read expr' or Const' Void *)
+  let readB param body =
+    let lst = read param body in
+    let final = List.filter (fun (elem) -> (elem <> (Const' Void))) lst in
+    if final <> [] then List.nth final 0 else Const' Void
+  in
+
+  (* Return write expr' list or Const' Void list *)
+  let rec write param body =
+    match body with
+      | Set'(Var'(VarParam(v, pos)), value) -> if v = param then [body] else [Const' Void]
+      | Set'(Var'(VarBound(v, depth, pos)), value) -> if v = param then [body] else [Const' Void]
+      | LambdaSimple' (params, currBody) -> write param currBody
+      | Applic'(op, exprs) -> write param op @ List.flatten (List.map (fun expr -> write param expr) exprs)
+      | ApplicTP'(op, exprs) -> write param op @ List.flatten (List.map (fun expr -> write param expr) exprs)
+      | _ -> [Const' Void]
+  in
+
+  (* Return write expr' or Const' Void *)
+  let writeB param body =
+    let lst = write param body in
+    let final = List.filter (fun (elem) -> (elem <> (Const' Void))) lst in
+    if final <> [] then List.nth final 0 else Const' Void
+  in
+  
+  (* Return true if param is bound in body, and false otherwise *)
+  let rec isBound param body = 
+    match body with
+      | Var' (VarBound (par, _, _)) -> par = param
+      | Def' (var, expr) | Set' (var, expr) -> isBound param var || isBound param expr
+      | If' (test, dit, dif) -> isBound param test || isBound param dit || isBound param dif
+      | BoxSet' (_, expr) -> isBound param expr
+      | Seq' exprs | Or' exprs -> ormap (isBound param) exprs
+      | Applic' (op, exprs) | ApplicTP' (op, exprs) -> isBound param op || ormap (fun e -> isBound param e) exprs
+      | LambdaSimple' (params, body) -> if (List.mem param params) then false else isBound param body
+      | LambdaOpt' (params, opt, body) -> if (List.mem param (opt :: params)) then false else isBound param body
+      | _ -> false 
+  in
+
+  let ancestor param body occurenceBody = isBound param occurenceBody in
+
+  (* Got param and body, return true if param should be boxed, and false otherwise *)
+  (* TODO: cover more cases *)
+  let shouldBox param body = 
+    let reads = readB param body in if reads = Const' Void then false else
+    let writes = writeB param body in if writes = Const' Void then false else
+    let final = (reads <> writes) in final
+    (* && (not (ancestor param body reads)) || (not (ancestor param body writes))  *)
+  in
+
+  (* TODO: delete later *)
+  (*
+  let debug str = annotate_lexical_addresses (tag_parse_expression (read_sexpr str)) in
+  let debug2 str = run_semantics (tag_parse_expression (read_sexpr str)) in 
+  *)
+
+  let rec checker params body toBox = 
+    match params with
+    | [] -> (boxThem body toBox) 
+    | car :: cdr -> checker cdr body (if (shouldBox car body) then (toBox @ [car]) else toBox) in
+  let check args body = checker args body [] in
+  let rec check_box e =
+    match e with
+    | Const' _ | Var' _ | Box' _ | BoxGet' _ -> e
+    | If' (test, dit, dif) -> If' (check_box test, check_box dit, check_box dif)
+    | Set' (var, value) -> Set' (var, check_box value)
+    | Def' (name, value) -> Def' (name, check_box value)
+    | Seq' exprs -> Seq' (List.map check_box exprs)
+    | Or' exprs -> Or' (List.map check_box exprs)
+    | Applic' (op, exprs) -> Applic' (check_box op, List.map check_box exprs)
+    | ApplicTP' (op, exprs) -> ApplicTP' (check_box op, List.map check_box exprs)
+    | BoxSet' (var, expr) -> BoxSet' (var, check_box expr)
+    | LambdaSimple' (args, body) -> LambdaSimple' (args, check_box (check args body)) 
+    | LambdaOpt' (args, opt, body) -> raise X_not_yet_implemented
+  in check_box e;;
+
+
+
+
+****
+  9.12 save for manual merge :
+
+  (* Replace all set occurences of param in body *)
+  let rec repGet param body = 
+    match body with
+      (* Base case *)
+      | Var' (VarParam(v, pos)) -> if param = v then BoxGet'(VarParam(v, pos)) else body
+      | Var' (VarBound(v, depth, pos)) -> if param = v then BoxGet'(VarBound(v, depth, pos)) else body
+      (* Replace values *)
+      | Set'(var, value) -> Set'(repGet param var, repGet param value)
+      | Def'(name, value) -> Def'(name, repGet param value)
+      | BoxSet' (var, value) -> BoxSet' (var, repGet param value)
+      (* Replace all exprs *)
+      | Or' exprs -> Or'(List.map (fun expr -> repGet param expr) exprs)
+      | If'(test, dit, dif) -> If'(repGet param test, repGet param dit, repGet param dif)
+      | Seq' exprs -> Seq' (List.map (fun expr -> repGet param expr) exprs)
+      (* Replace exprs *)
+      | Applic'(op, exprs) -> Applic'(repGet param op, (List.map (fun expr -> repGet param expr) exprs))
+      | ApplicTP'(op, exprs) -> ApplicTP'(repGet param op, (List.map (fun expr -> repGet param expr) exprs))
+      (* Replace bodies recursively *)
+      | LambdaSimple'(params, currBody) -> if (List.mem param params) then LambdaSimple' (params, currBody) 
+                                                                  else LambdaSimple' (params, repGet param currBody)  (* TODO: not opposite ? *)
+      | LambdaOpt'(params, op, currBody) -> if (List.mem param (params @ [op])) then LambdaOpt' (params, op, currBody) 
+                                                                                else LambdaOpt'(params, op, repGet param currBody)
+      | _ -> body
+  in
+
+  (* Helper for box function *)
+  let boxIt (param, pos) body = addSet (param, pos) (repGet param (repSet param body)) in
+
+  (* Final Parse function, got expr', return boxed expr' *)
+  let rec check_box e =
+    match e with
+      (* Base case => Box bodies *)
+      | LambdaSimple' (args, body) -> LambdaSimple' (args, check_box (boxThem args body)) 
+      | LambdaOpt' (args, opt, body) -> LambdaOpt' (args, opt, check_box (boxThem (args @ [opt]) body))
+      (* Check recursively if need to box *)
+      | If' (test, dit, dif) -> If' (check_box test, check_box dit, check_box dif)
+      | Set' (var, value) -> Set' (var, check_box value)
+      | Def' (name, value) -> Def' (name, check_box value)
+      | Seq' exprs -> Seq' (List.map check_box exprs)
+      | Or' exprs -> Or' (List.map check_box exprs)
+      | Applic' (op, exprs) -> Applic' (check_box op, List.map check_box exprs)
+      | ApplicTP' (op, exprs) -> ApplicTP' (check_box op, List.map check_box exprs)
+      | BoxSet' (var, expr) -> BoxSet' (var, check_box expr)
+      | _ -> e 
+in check_box e;;
+
+
+
+*******
+9.12
+notes
+
+******
+    (* let occs = [(findWriteB param body)] @ [(findReadB param body)] in
+    let filt = List.filter (fun occ -> occ <> Const' Void) occs in
+    let occ = if filt = [] then Const' Void else List.nth filt 0 in
+    let anc = if not (isBound param occ) then Const' Void else getAncestor param body occ in anc *)
+
+
+      (* Return true if param is bound in body, and false otherwise *)
+  let rec isBound param body = 
+    match body with
+      | Var' (VarBound (par, _, _)) -> par = param
+      | Def' (var, expr) | Set' (var, expr) -> isBound param var || isBound param expr
+      | If' (test, dit, dif) -> isBound param test || isBound param dit || isBound param dif
+      | BoxSet' (_, expr) -> isBound param expr
+      | Seq' exprs | Or' exprs -> ormap (isBound param) exprs
+      | Applic' (op, exprs) | ApplicTP' (op, exprs) -> isBound param op || ormap (fun e -> isBound param e) exprs
+      | LambdaSimple' (params, body) -> if (List.mem param params) then false else isBound param body
+      | LambdaOpt' (params, opt, body) -> if (List.mem param (params @ [opt])) then false else isBound param body
+      | _ -> false 
+  in
+
+
+  (* Got param and occurence,
+     If param present in occurence as Bound => Return depth of param,
+     Otherwise => -1 *)
+  (* TODO: add more cases *)
+  let rec getDepth param occ =
+    match occ with
+      | Var' (VarBound (par, depth, _)) -> if param = par then depth else -1
+      | Def' (vd, ed) -> getDepth param ed
+      | Set' (vs, es) -> getDepth param vs
+      | If'(test, dit, dif) -> max (max (getDepth param test) (getDepth param dit)) (getDepth param dif)
+      | _ -> -1
+  in
+    
+
+
+      (* Go "up" # depth levels of param occurence (occ) of read/write in body, and return the expr' (ancestor) *)
+  (* let traverseLambda param body occ depth = *)
+
+  (* let getAncestor param body occ = *)
+
+  (* let ancestor param body =
+    let reads = findReadB param body in
+    let writes = findWriteB param body in
+    (getAncestor param body reads) <> (getAncestor param body writes)
+  in *)
+
+
+   annotate_lexical_addresses (tag_parse_expression (read_sexpr "(define foo6
+        (lambda (x)
+          (lambda (op)
+            (cond ((eq? op 'read) (lambda () x))
+              ((eq? op 'write) (lambda (val) (set! x val)))))))
+  "));;
+- : expr' =
+Def' (Var' (VarFree "foo6"),
+ LambdaSimple' (["x"],
+  LambdaSimple' (["op"],
+   If'
+    (Applic' (Var' (VarFree "eq?"),
+      [Var' (VarParam ("op", 0)); Const' (Sexpr (Symbol "read"))]),
+    LambdaSimple' ([], Var' (VarBound ("x", 1, 0))),
+    If'
+     (Applic' (Var' (VarFree "eq?"),
+       [Var' (VarParam ("op", 0)); Const' (Sexpr (Symbol "write"))]),
+     LambdaSimple' (["val"],
+      Set' (Var' (VarBound ("x", 1, 0)), Var' (VarParam ("val", 0)))),
+     Const' Void))) ))
+
+
+  annotate_lexical_addresses (tag_parse_expression (read_sexpr "
+     (define foo7 ( lambda ( x)annotate_lexical_addresses (tag_parse_expression (read_sexpr "(define foo1 (lambda (x)
+                                                            (list (lambda () x)
+                                                              (lambda (y) (set! x y)))))"))    ;;
+- : expr' =
+Def' (Var' (VarFree "foo1"),
+ LambdaSimple' (["x"],
+  Applic' (Var' (VarFree "list"),
+   [LambdaSimple' ([], Var' (VarBound ("x", 0, 0)));
+    LambdaSimple' (["y"],
+     Set' (Var' (VarBound ("x", 0, 0)), Var' (VarParam ("y", 0))))])))
+                    (
+                      let ((y 1annotate_lexical_addresses (tag_parse_expression (read_sexpr "(define foo1 (lambda (x)
+                                                            (list (lambda () x)
+                                                              (lambda (y) (set! x y)))))"))    ;;
+- : expr' =
+Def' (Var' (VarFree "foo1"),
+ LambdaSimple' (["x"],
+  Applic' (Var' (VarFree "list"),
+   [LambdaSimple' ([], Var' (VarBound ("x", 0, 0)));
+    LambdaSimple' (["y"],
+     Set' (Var' (VarBound ("x", 0, 0)), Var' (VarParam ("y", 0))))])))
+                          `(,(lannotate_lexical_addresses (tag_parse_expression (read_sexpr "(define foo1 (lambda (x)
+                                                            (list (lambda () x)
+                                                              (lambda (y) (set! x y)))))"))    ;;
+- : expr' =
+Def' (Var' (VarFree "foo1"),
+ LambdaSimple' (["x"],
+  Applic' (Var' (VarFree "list"),
+   [LambdaSimple' ([], Var' (VarBound ("x", 0, 0)));
+    LambdaSimple' (["y"],
+     Set' (Var' (VarBound ("x", 0, 0)), Var' (VarParam ("y", 0))))])))))) "));;
+
+Def' (Var' (VarFree "foo7"),
+ LambdaSimple' (["x"],
+  Applic'
+   (LambdaSimple' (["y"],
+     Applic' (Var' (VarFree "cons"),
+      [LambdaSimple' ([], Var' (VarBound ("x", 1, 0)));
+       Applic' (Var' (VarFree "cons"),
+        [Set' (Var' (VarBound ("x", 0, 0)), Var' (VarParam ("y", 0)));
+         Const' (Sexpr Nil)])])),
+   [Const' (Sexpr (Number (Int 1)))])))
+
+
+   annotate_lexical_addresses (tag_parse_expression (read_sexpr "
+      (define foo2 (lambda (x y)
+                        (set! x (* x y))))"))    ;;
+- : expr' =
+Def' (Var' (VarFree "foo2"),
+ LambdaSimple' (["x"; "y"],
+  Set' (Var' (VarParam ("x", 0)),
+   Applic' (Var' (VarFree "*"),
+    [Var' (VarParam ("x", 0)); Var' (VarParam ("y", 1))]))))
+
+     annotate_lexical_addresses ( (tag_parse_expression (read_sexpr
+"(define foo8 (lambda (x y) (cons x (lambda () (set! x y)))))"))  );;
+- : expr' =
+Def' (Var' (VarFree "foo8"),
+ LambdaSimple' (["x"; "y"],
+  Applic' (Var' (VarFree "cons"),
+   [Var' (VarParam ("x", 0));
+    LambdaSimple' ([],
+     Set' (Var' (VarBound ("x", 0, 0)), Var' (VarBound ("y", 0, 1))))])))
+
+
+     annotate_lexical_addresses ((tag_parse_expression (read_sexpr "
+      (define foo2 (lambda (x y)
+                        (set! x (* x y))))")));;
+- : expr' =
+Def' (Var' (VarFree "foo2"),
+ LambdaSimple' (["x"; "y"],
+  Set' (Var' (VarParam ("x", 0)),
+   Applic' (Var' (VarFree "*"),
+    [Var' (VarParam ("x", 0)); Var' (VarParam ("y", 1))]))))
+
+    annotate_lexical_addresses  (tag_parse_expression (read_sexpr "(define foo4 (lambda (x y)
+                          (if x (lambda () (set! y x))
+                                            (lambda (z) (set! x z)))))"))    ;;
+- : expr' =
+Def' (Var' (VarFree "foo4"),
+ LambdaSimple' (["x"; "y"],
+  If' (Var' (VarParam ("x", 0)),
+   LambdaSimple' ([],
+    Set' (Var' (VarBound ("y", 0, 1)), Var' (VarBound ("x", 0, 0)))),
+   LambdaSimple' (["z"],
+    Set' (Var' (VarBound ("x", 0, 0)), Var' (VarParam ("z", 0)))))))
+
+
+    annotate_lexical_addresses (tag_parse_expression (read_sexpr "
+                (define foo5
+                        (lambda (x y)
+                        (list (lambda () (set! x (+ x 1)))
+                        (lambda () y))))" ))        ;;
+- : expr' =
+Def' (Var' (VarFree "foo5"),
+ LambdaSimple' (["x"; "y"],
+  Applic' (Var' (VarFree "list"),
+   [LambdaSimple' ([],
+     Set' (Var' (VarBound ("x", 0, 0)),
+      Applic' (Var' (VarFree "+"),
+       [Var' (VarBound ("x", 0, 0)); Const' (Sexpr (Number (Int 1)))])));
+    LambdaSimple' ([], Var' (VarBound ("y", 0, 1)))])))
+
+    annotate_lexical_addresses (tag_parse_expression (read_sexpr "(define foo1 (lambda (x)
+                                                            (list (lambda () x)
+                                                              (lambda (y) (set! x y)))))"))    ;;
+- : expr' =
+Def' (Var' (VarFree "foo1"),
+ LambdaSimple' (["x"],
+  Applic' (Var' (VarFree "list"),
+   [LambdaSimple' ([], Var' (VarBound ("x", 0, 0)));
+    LambdaSimple' (["y"],
+     Set' (Var' (VarBound ("x", 0, 0)), Var' (VarParam ("y", 0))))])))
+
+
+****
+
+     10.12 tests
+
+annotate_tail_calls (     annotate_lexical_addresses (tag_parse_expression (read_sexpr "
+          (define foo6
+            (lambda (x)
+            (lambda (op)
+            (cond ((eq? op 'read) (lambda () x))
+            ((eq? op 'write) (lambda (val) (set! x val)))))))"))          );;
+- : expr' =
+Def' (Var' (VarFree "foo6"),
+ LambdaSimple' (["x"],
+  LambdaSimple' (["op"],
+   If'
+    (Applic' (Var' (VarFree "eq?"),
+      [Var' (VarParam ("op", 0)); Const' (Sexpr (Symbol "read"))]),
+    LambdaSimple' ([], Var' (VarBound ("x", 1, 0))),
+    If'
+     (Applic' (Var' (VarFree "eq?"),
+       [Var' (VarParam ("op", 0)); Const' (Sexpr (Symbol "write"))]),
+     LambdaSimple' (["val"],
+      Set' (Var' (VarBound ("x", 1, 0)), Var' (VarParam ("val", 0)))),
+     Const' Void)))))
+#
+
+
+    *******
+    Removed prev version 9.12
+
+
+  (* Return true if find read expr', otherwise, return false *)
+  let rec read param body =
+    match body with
+      | Var'(VarParam(v, _)) | Var'(VarBound(v, _, _)) -> param = v
+      | Def' (var, expr) | Set' (var, expr) -> read param var || read param expr
+      | If' (test, dit, dif) -> read param test || read param dit || read param dif
+      | Seq' exprs | Or' exprs -> ormap (read param) exprs
+      | BoxSet' (_, expr) -> read param expr
+      | Applic' (op, exprs) | ApplicTP' (op, exprs) -> read param op || ormap (read param) exprs
+      | LambdaSimple' (params, body) -> if (List.mem param params) then false	else read param body
+      | LambdaOpt' (params, opt, body) -> if (List.mem param (params @ [opt])) then false else read param body
+      | _ -> false 
+  in
+
+  (* Return true if find write expr', otherwise, return false *)
+  (* TODO: Check not read in same closure *)
+  let rec write param body =
+    match body with
+      | Set' (Var' (VarParam (v, _)), expr) | Set' (Var' (VarBound (v, _, _)), expr) -> v = param || write param expr
+      | Def' (var, expr) | Set' (var, expr) -> write param var || write param expr
+      | If' (test, dit, dif) -> write param test || write param dit || write param dif
+      | Seq' exprs | Or' exprs -> ormap (write param) exprs
+      | BoxSet' (_, expr) -> write param expr
+      | Applic' (op, exprs) | ApplicTP' (op, exprs) -> write param op || ormap (fun e -> write param e) exprs
+      | LambdaSimple' (params, body) -> if (List.mem param params) then false else write param body
+      | LambdaOpt' (params, opt, body) -> if (List.mem param (params @ [opt])) then false else write param body
+      | _ -> false 
+  in
+
+
+  (* Returns true if param should be boxed and false otherwise *)
+  (* TODO: add test of different closure *)1
+  let shouldBox param body = (read param body) && (write param body) && (ancestor param body) in
+  let shouldBox param body = (read param body) && (write param body) && (ancestor param body) in
+
+
+
+**********************
+
+  prev version 10.12 
+
+
+    let rec check_box e =
+    match e with
+      (* Add check if body is Lambda *)
+      | LambdaSimple' (args, body) -> LambdaSimple' (args, (boxThem args body))
+      | LambdaOpt' (args, opt, body) -> LambdaOpt' (args, opt, (boxThem (args @ [opt]) body))
+      | If' (test, dit, dif) -> If' (check_box test, check_box dit, check_box dif)
+      | Set' (var, value) -> Set' (var, check_box value)
+      | Def' (name, value) -> Def' (name, check_box value)
+      | Seq' exprs -> Seq' (List.map check_box exprs)
+      | Or' exprs -> Or' (List.map check_box exprs)
+      | Applic' (op, exprs) -> Applic' (check_box op, List.map check_box exprs)
+      | ApplicTP' (op, exprs) -> ApplicTP' (check_box op, List.map check_box exprs)
+      | BoxSet' (var, expr) -> BoxSet' (var, check_box expr)
+      | _ -> e 
+  in check_box e;;
+
+
+
+    let rec findWrites param body = 
+    match body with
+      (* Check not read in value in base case *)
+      | Set'(Var'(VarParam(v, pos)), value) -> if ((findReads param value) = [] && v = param) then [body] else []
+      | Set'(Var'(VarBound(v, depth, pos)), value) -> if ((findReads param value) = [] && v = param) then [body] else []
+      (* Check not read in seq *)
+      | Seq' exprs -> if (List.map (fun expr -> findReads param expr) exprs) <> [] then [] (* Check not read in same seq *)
+        else List.flatten (List.map (fun expr -> findWrites param expr) exprs)
+      | If' (test, dit, dif) -> List.flatten ([findWrites param test] @ [findWrites param dit] @ [findWrites param dif])
+      | Def'(var, expr) -> findWrites param expr
+      | Applic'(op, exprs) -> findWrites param op @ List.flatten (List.map (fun expr -> findWrites param expr) exprs)
+      | ApplicTP'(op, exprs) -> findWrites param op @ List.flatten (List.map (fun expr -> findWrites param expr) exprs)
+      (* TODO: add case of nested lambda => avoid case of read & write, Check foo: 3, 6, 7 *)
+      | LambdaSimple' (params, currBody) ->
+        if (List.exists (fun p -> p = param) params) then
+          (match currBody with
+            | LambdaSimple' (p, b) -> if findReads param b <> [] then [] else findWrites param b
+            | LambdaOpt' (p, o, b) -> if findReads param b <> [] then [] else findWrites param b
+            | _ -> findWrites param currBody)
+        else findWrites param currBody
+      | LambdaOpt' (params, opt, currBody) -> findWrites param currBody
+      | _ -> []
+  in
+
+
+    (* Helper for shouldBox function *)
+  (* TODO: find out Logic of refer to same rib, Implement & check ancestors *)
+  let ancestor param body = 
+    let reads = findReads param body in
+    let rp = List.map (fun e -> match e with
+                                  | Var'(VarBound(_, _, pos)) -> pos
+                                  | _ -> -1) reads in
+    let writes = findWrites param body in
+    let wp = List.map (fun e -> match e with
+                                  | Set'(Var'(VarBound(_, _, pos)), _) -> pos
+                                  | _ -> -1) writes in
+    let wpf = List.filter (fun w -> w <> -1) wp in
+    let common = List.filter (fun w -> List.exists (fun r -> r = w) rp) wpf in
+    common = []
+  in
+
+  (* Improved version of shouldBox *)
+  (* TODO: Add check of acestors *)
+  let shouldBox param body = findWrites param body <> [] && findReads param body <> [] 
+  (* && ancestor param body *)
+  in
+
+
+  *****
+  prev 11.12 from reader.ml 
+    
+    (* Sexpr vector '[' parens *)
+    let vector_ = 
+      let prefix = word "#[" in
+      let sexprs = make_spaced _sexpr in
+      let lst = caten prefix (star sexprs) in
+      let vector = caten lst rparen_ in
+      let parsed = pack vector (fun (((_), slist), _) -> slist) in parsed
+    in
+
+    let vectors = disj_list [vector; vector_; ] in
+    let _vector = pack vectors (fun (s) -> Vector s) in
+
+
+
+    ******
+    14.12
+
+
+       | Seq' (Set' (Var' var), Box' (var)) ->
+          Seq' ([(Set' (Var' var), Box' var), Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos)))])
+       | Seq' ((Set' (Var' var), Box' var), exprs)->
+          Seq' ([(Set' (Var' var), Box' var), Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos)))] @ exprs)
+
+
+
+             let addSet (param, pos) body =
+     match body with
+       (* Change due to "box with Seq" Q in Forum, only one case, to Add seq *)
+       (* TODO: add support for multiple params in box, in same body (=> same Seq') *)
+       | Seq' [Set' (Var' v, Box' b)] ->
+          Seq' ([Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); Set' (Var' v, Box' b);])
+       | Seq' [Set' (Var' v, Box' b); rest] -> 
+          Seq' (Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); [Set' (Var' v, Box' b); rest])
+       | _ -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body]
+   in
+
+  *******
+   WORKING : 
+
+      (* Add set expr' in first Seq' of body we need to box *)
+   let addSet (param, pos) body =
+    (match body with
+      | Seq' exprs -> 
+        (match exprs with
+          | [Set' (_, Box' _)] -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body]
+          | [Set' (_, Box' _); _] | [Set' (_, Box' _); _; _] | [Set' (_, Box' _); _; _; _] -> 
+              Seq' ([Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos)))] @ exprs)
+          | _ -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body])
+      | _ -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body])
+  in
