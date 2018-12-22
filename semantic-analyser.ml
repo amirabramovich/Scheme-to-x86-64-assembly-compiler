@@ -67,9 +67,17 @@
  
  module Semantics : SEMANTICS = struct
  
-(* TODO:
-   .1. Run struct tests of Mayer
-   .2. Add more test => change code if necessary
+(*
+  22.12 update
+  Done:
+    .1. fix test 3 of course, rest of tests still passed.
+    .2. a bit order
+
+  TODO:
+   .1. Run struct_tests of the Course => fix tests if needed.
+   .2. Make order in code: try to make shorter and simpler (in functions, names, and more ..).
+   .3. Merge branch to master.
+   .4. Open new repository for final project with the course files, and merge this branch to it.
 *)
 
 (* Annotate lexical addresses, expr -> expr' *)
@@ -144,13 +152,32 @@
        | 0 -> []
        | _ -> (counter (i - 1)) @ [(i - 1)]
    in
+
+   (* Helper function, find rib of nested lambda *)
+   let getRib b rib fatherParam =
+     if fatherParam = false then rib
+     else
+     (match b with
+       | LambdaSimple'(params, _) | LambdaOpt' (params, _, _) -> b
+       | Applic' (op, exprs) | ApplicTP' (op, exprs) ->
+           (match op with
+             | LambdaSimple'(params, _) | LambdaOpt' (params, _, _) -> op
+             | _ -> rib)
+       | _ -> rib)
+   in
+
+   (* Helper function, get next father param *)
+   let getNextParam exprs expr fatherParam =
+     (match (exprs, expr) with
+       | (Set' _ :: _, Seq' _) -> fatherParam
+       | _ -> false)
+   in
  
    (* Add set expr' in first Seq' of body we need to box *)
    let addSet (param, pos) body =
     (match body with
       | Seq' exprs -> 
         (match exprs with
-          (* Due to Gilad comment, add case of already Set' expr' => keep in same Seq' *)
           | Set' (_, Box' _) :: _ -> Seq' ([Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos)))] @ exprs)
           | _ -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body])
       | _ -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body])
@@ -159,21 +186,16 @@
    (* Replace all set occurences of param in body *)
    let rec repGet param body = 
      match body with
-       (* Base case *)
        | Var' (VarParam(v, pos)) -> if param = v then BoxGet'(VarParam(v, pos)) else body
        | Var' (VarBound(v, depth, pos)) -> if param = v then BoxGet'(VarBound(v, depth, pos)) else body
-       (* Replace values *)
        | Set'(var, value) -> Set'(repGet param var, repGet param value)
        | Def'(name, value) -> Def'(name, repGet param value)
        | BoxSet' (var, value) -> BoxSet' (var, repGet param value)
-       (* Replace all exprs *)
        | Or' exprs -> Or'(List.map (fun expr -> repGet param expr) exprs)
        | If'(test, dit, dif) -> If'(repGet param test, repGet param dit, repGet param dif)
        | Seq' exprs -> Seq' (List.map (fun expr -> repGet param expr) exprs)
-       (* Replace exprs *)
        | Applic'(op, exprs) -> Applic'(repGet param op, (List.map (fun expr -> repGet param expr) exprs))
        | ApplicTP'(op, exprs) -> ApplicTP'(repGet param op, (List.map (fun expr -> repGet param expr) exprs))
-       (* Replace bodies recursively *)
        | LambdaSimple'(params, currBody) -> if (List.mem param params) then LambdaSimple' (params, currBody) 
                                                                        else LambdaSimple' (params, repGet param currBody)
        | LambdaOpt'(params, op, currBody) -> if (List.mem param (params @ [op])) then LambdaOpt' (params, op, currBody) 
@@ -202,40 +224,66 @@
                                                                               else LambdaOpt' (params, op, repSet param body)
        | _ -> body
    in
- 
-   (* findReads, got param and body => list of read occurences *)
-   let rec findReads param body =
-     (match body with
-       | Var'(VarParam(v, pos)) -> if param = v then [body] else []
-       | Var'(VarBound(v, depth, pos)) -> if param = v then [body] else []
-       | Seq' exprs -> List.flatten (List.map (fun expr -> findReads param expr) exprs)
-       | If' (test, dit, dif) -> List.flatten ([findReads param test] @ [findReads param dit] @ [findReads param dif])
-       | Def'(var, expr) -> findReads param expr
-       | Applic'(op, exprs) -> findReads param op @ List.flatten (List.map (fun expr -> findReads param expr) exprs)
-       | ApplicTP'(op, exprs) -> findReads param op @ List.flatten (List.map (fun expr -> findReads param expr) exprs)
-       | LambdaSimple' (params, currBody) -> findReads param currBody 
-       | LambdaOpt' (params, opt, currBody) -> findReads param currBody
-       | _ -> [])
-   in
- 
-   (* findWrites, got param and body => list of write occurences *)
-   let rec findWrites param body = 
+    
+   (* findReads, got param and body => list of (closure, rib) of occurences *)
+   let rec findReads param body closure rib fatherParam = (* fatherParam ::= true, if param occur in father closure params *)    
+     (* Helper function for nested Lambda *)
+     let findLambda param params currBody rib = 
+        if (List.mem param params) then [] 
+        else findReads param currBody currBody rib false
+     in
+     (* Main Find function *)
      match body with
-       | Set'(Var'(VarParam(v, pos)), value) -> if ((findReads param value) = [] && v = param) then [body] else []
-       | Set'(Var'(VarBound(v, depth, pos)), value) -> if ((findReads param value) = [] && v = param) then [body] else []
-       | Seq' exprs -> List.flatten (List.map (fun expr -> findWrites param expr) exprs)
-       | If' (test, dit, dif) -> List.flatten ([findWrites param test] @ [findWrites param dit] @ [findWrites param dif])
-       | Def'(var, expr) -> findWrites param expr
-       | Applic'(op, exprs) -> findWrites param op @ List.flatten (List.map (fun expr -> findWrites param expr) exprs)
-       | ApplicTP'(op, exprs) -> findWrites param op @ List.flatten (List.map (fun expr -> findWrites param expr) exprs)
-       | LambdaSimple' (params, currBody) -> if findReads param currBody <> [] then []  else findWrites param currBody
-       | LambdaOpt' (params, opt, currBody) -> if findReads param currBody <> [] then []  else findWrites param currBody
+       | Var'(VarParam(v, pos)) -> if param = v then [closure, rib] else []
+       | Var'(VarBound(v, depth, pos)) -> if param = v then [closure, rib] else []
+       | Set'(Var'(var), value) | BoxSet'(var, value) -> findReads param value closure rib false
+       | Seq' exprs | Or' exprs -> List.flatten (List.map (fun expr -> 
+          findReads param expr closure (getRib expr rib fatherParam) (getNextParam exprs expr fatherParam)) exprs)
+       | If' (test, dit, dif) -> List.flatten ([findReads param test closure rib false] @ [findReads param dit closure rib false] @ 
+                                               [findReads param dif closure rib false])
+       | Def'(var, expr) -> findReads param expr closure rib false
+       | Applic'(op, exprs) | ApplicTP'(op, exprs) ->
+          findReads param op closure rib false @ List.flatten (List.map (fun expr -> findReads param expr closure rib false) exprs)
+       | LambdaSimple' (params, currBody) -> findLambda param params currBody rib
+       | LambdaOpt' (params, opt, currBody) -> findLambda param params currBody rib
        | _ -> []
    in
- 
-   (* shouldBox, got param and body, return true if it param should be boxed *)
-   let shouldBox param body = findWrites param body <> [] && findReads param body <> [] in
- 
+
+   (* findWrites, got param and body => list of (closure, rib) of occurences *)
+   let rec findWrites param body closure rib fatherParam =
+     (* Helper function for nested Lambda *)
+     let findLambda param params currBody rib = 
+        if (List.mem param params) then [] 
+        else findWrites param currBody currBody rib false
+    in
+     (* Main Find function *)
+     match body with
+       | Set'(Var'(VarParam(v, pos)), value) -> if v = param then [closure, rib] else []
+       | Set'(Var'(VarBound(v, depth, pos)), value) -> if v = param then [closure, rib] 
+                                                       else findWrites param value closure rib false (* nested set *)
+       | Set' (Var'(VarFree v), value) -> findWrites param value closure rib false
+       | Seq' exprs | Or' exprs -> List.flatten (List.map (fun expr -> 
+          findWrites param expr closure (getRib expr rib fatherParam) (getNextParam exprs expr fatherParam)) exprs)
+       | If' (test, dit, dif) -> List.flatten ([findWrites param test closure rib false] @ [findWrites param dit closure rib false] @ 
+                                               [findWrites param dif closure rib false])
+       | Def'(var, expr) -> findWrites param expr closure rib false
+       | Applic'(op, exprs) | ApplicTP'(op, exprs) -> 
+          findWrites param op closure rib false @ List.flatten (List.map (fun expr -> findWrites param expr closure rib false) exprs)
+       | LambdaSimple' (params, currBody) -> findLambda param params currBody rib
+       | LambdaOpt' (params, opt, currBody) -> findLambda param params currBody rib
+       | _ -> []
+   in
+   
+   (* shouldBox, got param and body, return true if param should be boxed *)
+   let shouldBox param body =
+     let rib = getRib body (Const' Void) true in
+     let writes = findWrites param body body rib true in
+     let reads = findReads param body body rib true in
+     let diff = List.map (fun (clos_r, rib_r) -> (List.exists (fun (clos_w, rib_w) -> 
+        not (clos_r == clos_w) && (not (rib_r == rib_w) || rib_r = Const' Void || rib_r = clos_r)) writes)) reads in
+     List.exists (fun b -> b = true) diff
+   in
+
    (* Helper for box function *)
    let boxIt (param, pos) body = addSet (param, pos) (repGet param (repSet param body)) in
  
@@ -248,8 +296,8 @@
    (* Final Parse function, got expr', return boxed expr' *)
    let rec check_box e =
      match e with
-       | LambdaSimple' (args, body) -> LambdaSimple' (args, (boxThem args body))
-       | LambdaOpt' (args, opt, body) -> LambdaOpt' (args, opt, (boxThem (args @ [opt]) body))
+       | LambdaSimple' (args, body) -> LambdaSimple' (args, check_box (boxThem args body))
+       | LambdaOpt' (args, opt, body) -> LambdaOpt' (args, opt, check_box (boxThem (args @ [opt]) body))
        | If' (test, dit, dif) -> If' (check_box test, check_box dit, check_box dif)
        | Set' (var, value) -> Set' (var, check_box value)
        | Def' (name, value) -> Def' (name, check_box value)
