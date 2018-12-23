@@ -76,8 +76,6 @@
   TODO:
    .1. Run struct_tests of the Course => fix tests if needed.
    .2. Make order in code: try to make shorter and simpler (in functions, names, and more ..).
-   .3. Merge branch to master.
-   .4. Open new repository for final project with the course files, and merge this branch to it.
 *)
 
 (* Annotate lexical addresses, expr -> expr' *)
