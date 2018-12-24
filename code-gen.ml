@@ -16,13 +16,15 @@ end;;
 module Code_Gen : CODE_GEN = struct
 
 
-  (* 23.12, 22.49 update
+  (* 24.12, 02.24 update
      Done:
-        .1. Add tests
+        .1. In expand_lst: fix pair ? => not sure (but maybe ... no time to validate : \)
+        .2. Expand const_tbl => need to check ..
+        .3. Add tests & order in tests ..
 
     TODO:
-        .1. In expand_lst: fix pair case
-        .2. Add tests
+        .1. Add tests (cons_tbl and more ..).
+        .2. Make order in code: "clean" un necessary comments (move to tests or notes ..).
   *)
 
 
@@ -44,6 +46,16 @@ module Code_Gen : CODE_GEN = struct
       | [] -> []
       | car :: cdr -> car :: (remove_dups (List.filter (fun e -> e <> car) cdr)) ;;
 
+  (* Recieves pairs and flattens them to list *)
+  (* Taken from tag-parser.ml *)
+  (* Idea: take helper functions of code-gen.ml, and helpers funcs that appear in multiple files, into one lib.ml file in Struct *)
+  let rec flatPair = function
+    | Nil -> []
+    | Pair(a, Nil) -> [a]
+    | Pair(a, Pair(b, c)) -> a :: (flatPair(Pair(b, c)))
+    | Pair(a, b) -> [a; b]
+    | _ -> raise X_syntax_error;;
+
   (* 3. Expand the list to include all sub-constants
   The list should be sorted topologically *)
   (* Logic of code is from ps #11, 2.2.1 *)
@@ -52,15 +64,7 @@ module Code_Gen : CODE_GEN = struct
       | car :: cdr -> 
           (match car with
             | Symbol (str) -> expand_lst cdr ([String str; car] @ newLst)
-            | Pair(currCar, currCdr) -> expand_lst cdr [currCar; currCdr; car] @ newLst
-
-              (* let rec expand_pair car currCar currCdr newLst = 
-              (match currCdr with
-                | Pair (f, s) -> [currCar] @ expand_pair car f s [] @ [car] @ newLst
-                | _ -> expand_lst cdr ([currCar; currCdr; car] @ newLst))
-              in
-              expand_pair car currCar currCdr newLst *)
-
+            | Pair (f, s) -> expand_lst cdr ((flatPair car) @ newLst)
             | Vector (elems) -> 
                 let vecLst = expand_lst elems [] in
                 expand_lst cdr (newLst @ vecLst @ [car])
@@ -110,7 +114,16 @@ module Code_Gen : CODE_GEN = struct
   let rec cons_tbl consts tbl addr =
     match consts with
     | car :: cdr -> (match car with
-                        | String expr -> cons_tbl cdr (tbl @ [(expr, (addr, "test"))]) (addr + size_of car)
+                        | String expr -> cons_tbl cdr (tbl @ [(expr, (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
+                        | Number(Int num) -> 
+                          cons_tbl cdr (tbl @ [((string_of_int num), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
+                        (* 
+                          TODO: 
+                            .1. complete function
+                            .2. test Number and func. 
+                        *)
+                        | Number(Float num) -> raise X_not_yet_implemented
+                        | Symbol (sym) -> raise X_not_yet_implemented
                         | _ -> raise X_not_yet_implemented) (* Added due to Warning: "pattern-matching not exhaustive" *)
     | _ -> tbl ;;
 

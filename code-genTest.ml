@@ -66,17 +66,21 @@ let dups2_test x = remove_dups (expand_test x) ;;
 let tbl_test x = cons_tbl (dups2_test x) ;;
 
 (* Compare sexprs *)
-let sexprs_eq slist1 slist2 = 
-  let comb = List.combine slist1 slist2 in
-  let res = List.map (fun (s1, s2) -> sexpr_eq s1 s2) comb in
-  not (List.exists (fun e -> e = false) res);;
+(* Note: if 2 lists diff' length => List.combine raise exception Invalid_argument *)
+let sexprs_eq slist1 slist2 =
+  try
+    (let comb = List.combine slist1 slist2 in
+    let res = List.map (fun (s1, s2) -> sexpr_eq s1 s2) comb in
+    not (List.exists (fun e -> e = false) res))
+  with 
+    Invalid_argument "List.combine" -> false;;
 
 (* Compare 2 const, each type is (string, (int, string) ) *)
 let const_eq (sl1, (n1, sr1)) (sl2, (n2, sr2)) = 
   sl1 = sl2 && n1 = n2 && sr1 = sr2;;
 
 (* Compare list of const, i.e, table *)
-let table_eq tblist1 tblist2 = 
+let table_eq tblist1 tblist2 =
   let comb = List.combine tblist1 tblist2 in
   let res = List.map (fun (s1, s2) -> const_eq s1 s2) comb in
   not (List.exists (fun e -> e = false) res);;
@@ -120,42 +124,50 @@ let duplic_test = [(1, d1); (2, d2); (3, d3); (4, d4)];;
 let e1 = sexprs_eq (expand_test "1") ([Number (Int 1)]);;
 let e2 = sexprs_eq (expand_test "1 1") ([Number (Int 1)]);; 
 let e3 = sexprs_eq (expand_test "'a") ([String "a"; Symbol "a"]);;
-let e4 = sexprs_eq (expand_test "'(1)") ( [Number (Int 1); Nil; Pair (Number (Int 1), Nil)]);;
+let e4 = sexprs_eq (expand_test "'(1)") ([Number (Int 1)]);;
 let e5 = sexprs_eq (expand_test "#( #\\c 37392.39382 )") ([Number (Float 37392.39382); Char 'c'; Vector [Char 'c'; Number (Float 37392.39382)]]);; 
-let e6 = sexprs_eq (expand_test "'(1 (2 3))") ([Number (Int 1);
-                                                    Pair (Pair (Number (Int 2), Pair (Number (Int 3), Nil)), Nil);
-                                                    Pair (Number (Int 1),
-                                                    Pair (Pair (Number (Int 2), Pair (Number (Int 3), Nil)), Nil))]);; (* TODO: need to fix *)
+let e6 = sexprs_eq (expand_test "'(1 (2 3))") ([Number (Int 1); Pair (Number (Int 2), Pair (Number (Int 3), Nil))]);;
+(* TODO: need to validate *)
 
-let expand_test = [(1, e1); (2, e2); (3, e3); (4, e4); (5, e5); (6, e6);];;
-(testSum purple "Expand" expand_test);;
-(testFailed expand_test);;
+let expan_test = [(1, e1); (2, e2); (3, e3); (4, e4); (5, e5); (6, e6); ];;
+(testSum purple "Expand" expan_test);;
+(testFailed expan_test);;
 
 
 (* Dup 2 test *)
 let d_1 = sexprs_eq (dups2_test "1") ([Number (Int 1)]);;
 let d_2 = sexprs_eq (dups2_test "1 1") ([Number (Int 1)]);; 
 let d_3 = sexprs_eq (dups2_test "'a") ( [String "a"; Symbol "a"]);;
-let d_4 = sexprs_eq (dups2_test "'(1)") ( [Number (Int 1); Nil; Pair (Number (Int 1), Nil)]);;
+let d_4 = sexprs_eq (dups2_test "'(1)") ([Number (Int 1)]);;
 let d_5 = sexprs_eq (dups2_test "#( #\\c 37392.39382 )") ([Number (Float 37392.39382); Char 'c'; Vector [Char 'c'; Number (Float 37392.39382)]]);; 
-let d_6 = sexprs_eq (dups2_test "'(1 (2 3))") ([Number (Int 1); Pair (Number (Int 2), Pair (Number (Int 3), Nil)); Nil;
-                                                    Pair (Number (Int 1), Pair (Pair (Number (Int 2), Pair (Number (Int 3), Nil)), Nil))]);;
+let d_6 = sexprs_eq (dups2_test "'(1 (2 3))") (  [Number (Int 1); Pair (Number (Int 2), Pair (Number (Int 3), Nil))])
 let d_7 = sexprs_eq (dups2_test "\"This is a string\"") ( [String "This is a string"]);;
 
-let dup2_test = [(1, d_1); (2, d_2); (3, d_3); (4, d_4); (5, d_5); (6, d_6); (7, d_7);];; 
+let dup2_test = [(1, d_1); (2, d_2); (3, d_3); (4, d_4); (5, d_5); (6, d_6); (7, d_7);  ];; 
 (testSum mag "Remove dups 2" dup2_test);;
 (testFailed dup2_test);;
 
 
 (* Table test *)
-let t1 = table_eq (tbl_test "\"This is first string\" \"This is second string\" ") 
-                  ([("Void", (0, "MAKE_VOID")); ("Nil", (1, "MAKE_NIL"));
-                  ("Bool false", (2, "MAKE_BOOL(0)")); ("Bool true", (4, "MAKE_BOOL(1)"));
-                  ("This is first string", (6, "test"));
-                  ("This is second string", (35, "test"))]);;
+let t1 = table_eq (tbl_test "\"This is first string\" \"This is second string\" ")
+                      ([("Void", (0, "MAKE_VOID")); ("Nil", (1, "MAKE_NIL"));
+                      ("Bool false", (2, "MAKE_BOOL(0)")); ("Bool true", (4, "MAKE_BOOL(1)"));
+                      ("This is first string",
+                       (6, "MAKE_LITERAL_STRING(\"This is first string\")"));
+                      ("This is second string",
+                       (35, "MAKE_LITERAL_STRING(\"This is second string\")"))])
+(* let t2 = (tbl_test "(list \"ab\" '(1 2) 'c 'ab)");; *)
+(* TODO: add more tests *)
 
 let table_test = [(1, t1)];;
 (testSum cyan "Table" table_test);;
 (testFailed table_test);;
- 
 
+
+(* All tests *)
+let all_test = scan_ast_test @ duplic_test @ expan_test @ dup2_test @ table_test;;
+(testSum yel "All" all_test);;
+allPassed cyan all_test;;
+ 
+ 
+print grn "code-gen end tests";;

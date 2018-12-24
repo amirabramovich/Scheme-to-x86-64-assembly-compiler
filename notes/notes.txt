@@ -741,3 +741,21 @@ Def' (Var' (VarFree "foo6"),
           | _ -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body])
       | _ -> Seq' [Set' (Var' (VarParam (param, pos)), Box' (VarParam (param, pos))); body])
   in
+
+
+
+
+  24.12
+  *****
+          from expand-lst
+          
+              (* let rec expand_pair car currCar currCdr newLst = 
+              (match currCdr with
+                | Pair (f, s) -> [currCar] @ expand_pair car f s [] @ [car] @ newLst
+                | _ -> expand_lst cdr ([currCar; currCdr; car] @ newLst))
+              in
+              expand_pair car currCar currCdr newLst *)
+
+
+                          (* expand_lst cdr [currCar; currCdr; car] @ newLst *)
+
