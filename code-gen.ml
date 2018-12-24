@@ -64,7 +64,7 @@ module Code_Gen : CODE_GEN = struct
       | car :: cdr -> 
           (match car with
             | Symbol (str) -> expand_lst cdr ([String str; car] @ newLst)
-            | Pair (f, s) -> expand_lst cdr ((flatPair car) @ newLst)
+            | Pair(currCar, currCdr) -> expand_lst cdr ((expand_lst [currCar] []) @ (expand_lst [currCdr] []) @ [car] @ newLst)
             | Vector (elems) -> 
                 let vecLst = expand_lst elems [] in
                 expand_lst cdr (newLst @ vecLst @ [car])
@@ -103,7 +103,7 @@ module Code_Gen : CODE_GEN = struct
 
   let rec get_const const tbl =
     match tbl with
-      | (sexpr, info) :: cdr -> if sexpr_eq const sexpr then info 
+      | (Sexpr sexpr, info) :: cdr -> if sexpr_eq const sexpr then info 
                                 else get_const const cdr
       | [] -> raise X_not_yet_implemented;;
 
@@ -114,10 +114,10 @@ module Code_Gen : CODE_GEN = struct
   let rec cons_tbl consts tbl addr =
     match consts with
     | car :: cdr -> (match car with
-                        | String expr -> cons_tbl cdr (tbl @ [(expr, (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
+                        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
                         | Number(Int num) -> 
-                          cons_tbl cdr (tbl @ [((string_of_int num), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
-                        (* 
+                          cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
+                        (*  
                           TODO: 
                             .1. complete function
                             .2. test Number and func. 
@@ -128,12 +128,57 @@ module Code_Gen : CODE_GEN = struct
     | _ -> tbl ;;
 
   let cons_tbl consts = cons_tbl consts [
-    ("Void", (0, "MAKE_VOID"));
-    ("Nil", (1, "MAKE_NIL"));
-    ("Bool false", (2, "MAKE_BOOL(0)"));
-    ("Bool true", (4, "MAKE_BOOL(1)"));
+    (Void, (0, "MAKE_VOID"));
+    (Sexpr(Nil), (1, "MAKE_NIL"));
+    (Sexpr(Bool false), (2, "MAKE_BOOL(0)"));
+    (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));
     ] 6;;
 
+    (* ----------TESTS----------- *)
+    (* #use "code-gen.ml";; *)
+    open Semantics;;
+    open Tag_Parser;;
+    open Reader;;
+    open PC;;
+    let multi_annotate_lexical_addresses exprs = List.map annotate_lexical_addresses exprs;;
+    let scan_test x = scan_ast (multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
+    scan_test "1";;
+    scan_test "1 1";;
+    scan_test "'(1)";;
+    scan_test "'(1 2 3 4)";;
+    scan_test "(foo 2)";;
+    scan_test "(+ 1 2)";;
+    scan_test "'a";;
+    scan_test "'(1 (2 3))";;
+    scan_test "'(1 .(2 3))";;
+    scan_test "#( #t )";;
+    scan_test "#( 37392 )";;
+    scan_test "#( 37392.39382 )";;
+    scan_test "#( #\\c 37392.39382 )";; 
+    let dups_test x = remove_dups(scan_test x) ;;
+    dups_test "1";;
+    dups_test "1 1";; 
+    dups_test "'(1 (2 3))";; 
+    dups_test "#( #\\c 37392.39382 )";; 
+    let expand_test x = expand_lst(dups_test x) ;;
+    expand_test "1";;
+    expand_test "1 1";; 
+    expand_test "'a";;
+    expand_test "'(1)";;
+    expand_test "#( #\\c 37392.39382 )";; 
+    expand_test "'(1 (2 3))";; 
+    let dups2_test x = remove_dups(expand_test x) ;;
+    dups2_test "1";;
+    dups2_test "1 1";; 
+    dups2_test "'a";;
+    dups2_test "'(1)";;
+    dups2_test "#( #\\c 37392.39382 )";; 
+    dups2_test "'(1 (2 3))";;
+    dups2_test "'((1 2) (2 3))";;
+    dups2_test "\"This is a string\"";;
+    let tbl_test x = cons_tbl(dups2_test x) ;;
+    tbl_test "\"This is first string\" \"This is second string\" ";;
+     (* ----------TESTS-END----------- *)
 
   (*  expr' list -> (constant * ('a * string)) list *)
   let make_consts_tbl asts = raise X_not_yet_implemented;;
