@@ -10,26 +10,19 @@ module type CODE_GEN = sig
   val scan_ast : expr' list -> sexpr list
   val remove_dups : 'a list -> 'a list
   val expand_lst : sexpr list -> sexpr list
-  val cons_tbl : sexpr list -> (string * (int * string)) list
 end;;
 
 module Code_Gen : CODE_GEN = struct
 
 
-  (* 24.12, 02.24 update
-     Done:
-        .1. In expand_lst: fix pair ? => not sure (but maybe ... no time to validate : \)
-        .2. Expand const_tbl => need to check ..
-        .3. Add tests & order in tests ..
-
+  (* 25.12, 12:10 update
     TODO:
-        .1. Add tests (cons_tbl and more ..).
-        .2. Make order in code: "clean" un necessary comments (move to tests or notes ..).
+        .1. Add tests 
+        .2. check and fix pair in cons_tbl.
   *)
 
 
-  (* 1. Scan the AST (one recursive pass) & collect the sexprs in all
-  Const records - The result is a list of sexprs *)
+  (* 1. Scan the AST (one recursive pass) & collect the sexprs in all Const records - The result is a list of sexprs *)
   let rec scan_ast asts consts = 
     match asts with
       | car :: cdr -> (match car with
@@ -101,11 +94,7 @@ module Code_Gen : CODE_GEN = struct
       | Pair _ -> 17
       | Vector(v) -> 9 + (8 * (List.length v));;
 
-  let rec get_const const tbl =
-    match tbl with
-      | (Sexpr sexpr, info) :: cdr -> if sexpr_eq const sexpr then info 
-                                else get_const const cdr
-      | [] -> raise X_not_yet_implemented;;
+  let get_const const tbl = List.assoc const tbl;;
 
   let get_const_addr const tbl =
     let (addr, _) = get_const const tbl 
@@ -114,19 +103,20 @@ module Code_Gen : CODE_GEN = struct
   let rec cons_tbl consts tbl addr =
     match consts with
     | car :: cdr -> (match car with
+                        | Char ch -> raise X_not_yet_implemented
                         | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
                         | Number(Int num) -> 
                           cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
-                        (*  
-                          TODO: 
-                            .1. complete function
-                            .2. test Number and func. 
-                        *)
-                        | Number(Float num) -> raise X_not_yet_implemented
-                        | Symbol (sym) -> raise X_not_yet_implemented
-                        | _ -> raise X_not_yet_implemented) (* Added due to Warning: "pattern-matching not exhaustive" *)
-    | _ -> tbl ;;
-
+                        | Number(Float num) -> 
+                          cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ")"))]) (addr + size_of car)
+                        | Symbol sym -> 
+                          cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(consts+" ^ string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ")"))]) (addr + size_of car) 
+                        | Pair (f, s) -> 
+                          cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(consts+" ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ ", consts+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ")"))]) (addr + size_of car)
+                        | Vector v -> raise X_not_yet_implemented 
+                        | _ -> raise X_syntax_error) 
+    | [] -> tbl ;;
+    
   let cons_tbl consts = cons_tbl consts [
     (Void, (0, "MAKE_VOID"));
     (Sexpr(Nil), (1, "MAKE_NIL"));
@@ -136,7 +126,7 @@ module Code_Gen : CODE_GEN = struct
 
     (* ----------TESTS----------- *)
     (* #use "code-gen.ml";; *)
-    open Semantics;;
+    (* open Semantics;;
     open Tag_Parser;;
     open Reader;;
     open PC;;
@@ -178,6 +168,7 @@ module Code_Gen : CODE_GEN = struct
     dups2_test "\"This is a string\"";;
     let tbl_test x = cons_tbl(dups2_test x) ;;
     tbl_test "\"This is first string\" \"This is second string\" ";;
+    tbl_test "1 2 1 (1 2)";; *)
      (* ----------TESTS-END----------- *)
 
   (*  expr' list -> (constant * ('a * string)) list *)
