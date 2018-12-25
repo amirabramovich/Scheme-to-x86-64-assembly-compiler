@@ -9,8 +9,9 @@ module type CODE_GEN = sig
   (* TODO: delete later *)
   val scan_ast : expr' list -> sexpr list
   val remove_dups : 'a list -> 'a list
+  val filter_const : sexpr list -> sexpr list
   val expand_lst : sexpr list -> sexpr list
-  val cons_tbl : sexpr list -> (string * (int * string)) list
+  val cons_tbl : sexpr list -> (constant * (int * string)) list
 end;;
 
 module Code_Gen : CODE_GEN = struct
@@ -46,6 +47,17 @@ module Code_Gen : CODE_GEN = struct
       | [] -> []
       | car :: cdr -> car :: (remove_dups (List.filter (fun e -> e <> car) cdr)) ;;
 
+  let rec filter_const lst const = 
+    match lst with
+      | car :: cdr ->
+          (match car with
+            | Bool _ | Number _ | Nil | Char _ | String _ | Symbol _ | Pair _ | Vector _ -> 
+              if List.mem car const then filter_const cdr const else filter_const cdr (const @ [car])
+            | _ -> filter_const cdr const) (* TODO: fix warning *)
+      | [] -> const;;
+
+  let filter_const lst = filter_const lst [];;
+
   (* Recieves pairs and flattens them to list *)
   (* Taken from tag-parser.ml *)
   (* Idea: take helper functions of code-gen.ml, and helpers funcs that appear in multiple files, into one lib.ml file in Struct *)
@@ -69,6 +81,7 @@ module Code_Gen : CODE_GEN = struct
                 let vecLst = expand_lst elems [] in
                 expand_lst cdr (newLst @ vecLst @ [car])
             | _ -> expand_lst cdr ([car] @ newLst))
+            (* | Nil -> raise X_not_yet_impleneted *)
       | [] -> newLst ;;
 
   let expand_lst lst = expand_lst lst [] ;;
@@ -104,27 +117,46 @@ module Code_Gen : CODE_GEN = struct
   let rec get_const const tbl =
     match tbl with
       | (Sexpr sexpr, info) :: cdr -> if sexpr_eq const sexpr then info 
-                                else get_const const cdr
-      | [] -> raise X_not_yet_implemented;;
+                                      else get_const const cdr
+      | [] -> raise X_not_yet_implemented
+      | _ -> raise X_not_yet_implemented;; (* fix warning *)
 
   let get_const_addr const tbl =
     let (addr, _) = get_const const tbl 
   in addr;;
 
+  let sexp_eq s1 s2 = (* s1 = Sexpr (String str1), s2 = Sexpr(String str2) *)
+    match s1, s2 with
+      | (Symbol sym), (String str) -> sym = str
+      | (Number n1), (Number n2) -> n1 = n2
+      | (Bool b1), (Bool b2) -> b1 = b2
+      | s_1, s_2 -> s_1 = s_2;;
+
+  let rec orig_addr s tbl = 
+    let filt = List.map (fun (_,(a, _)) -> a) (List.filter (fun (Sexpr sexpr, (_, _)) -> sexp_eq s sexpr) tbl) in
+    if (List.length filt) = 0 then -1 else (List.nth filt 0);;
+
   let rec cons_tbl consts tbl addr =
     match consts with
-    | car :: cdr -> (match car with
-                        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
-                        | Number(Int num) -> 
-                          cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
-                        (*  
-                          TODO: 
-                            .1. complete function
-                            .2. test Number and func. 
-                        *)
-                        | Number(Float num) -> raise X_not_yet_implemented
-                        | Symbol (sym) -> raise X_not_yet_implemented
-                        | _ -> raise X_not_yet_implemented) (* Added due to Warning: "pattern-matching not exhaustive" *)
+    | car :: cdr -> 
+      (match car with
+        | Nil | Bool _ -> cons_tbl cdr tbl addr
+        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
+        | Number(Int num) -> 
+          cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
+        (*  
+          TODO: 
+            .1. complete function
+            .2. test Number and func. 
+        *)
+        | Number(Float num) -> cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, 
+            "MAKE_LITERAL_FLOAT(" ^ (string_of_int (int_of_float num)) ^ ")"))]) (addr + size_of car)
+        | Symbol sym -> cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, 
+          "MAKE_LITERAL_SYMBOL(consts+" ^ string_of_int (orig_addr car tbl) ^ ")"))]) (addr + size_of car)
+        | Pair (f, s) -> cons_tbl cdr (tbl @ [(Sexpr car, (addr, 
+          "MAKE_LITERAL_PAIR(const+" ^ string_of_int (orig_addr f tbl) ^ ", const+" ^ string_of_int (orig_addr s tbl) ^ ")"))]) (addr + size_of car)
+        | Vector v -> raise X_not_yet_implemented
+        | _ -> raise X_not_yet_implemented) (* Added due to Warning: "pattern-matching not exhaustive" *)
     | _ -> tbl ;;
 
   let cons_tbl consts = cons_tbl consts [
@@ -134,51 +166,6 @@ module Code_Gen : CODE_GEN = struct
     (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));
     ] 6;;
 
-    (* ----------TESTS----------- *)
-    (* #use "code-gen.ml";; *)
-    open Semantics;;
-    open Tag_Parser;;
-    open Reader;;
-    open PC;;
-    let multi_annotate_lexical_addresses exprs = List.map annotate_lexical_addresses exprs;;
-    let scan_test x = scan_ast (multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
-    scan_test "1";;
-    scan_test "1 1";;
-    scan_test "'(1)";;
-    scan_test "'(1 2 3 4)";;
-    scan_test "(foo 2)";;
-    scan_test "(+ 1 2)";;
-    scan_test "'a";;
-    scan_test "'(1 (2 3))";;
-    scan_test "'(1 .(2 3))";;
-    scan_test "#( #t )";;
-    scan_test "#( 37392 )";;
-    scan_test "#( 37392.39382 )";;
-    scan_test "#( #\\c 37392.39382 )";; 
-    let dups_test x = remove_dups(scan_test x) ;;
-    dups_test "1";;
-    dups_test "1 1";; 
-    dups_test "'(1 (2 3))";; 
-    dups_test "#( #\\c 37392.39382 )";; 
-    let expand_test x = expand_lst(dups_test x) ;;
-    expand_test "1";;
-    expand_test "1 1";; 
-    expand_test "'a";;
-    expand_test "'(1)";;
-    expand_test "#( #\\c 37392.39382 )";; 
-    expand_test "'(1 (2 3))";; 
-    let dups2_test x = remove_dups(expand_test x) ;;
-    dups2_test "1";;
-    dups2_test "1 1";; 
-    dups2_test "'a";;
-    dups2_test "'(1)";;
-    dups2_test "#( #\\c 37392.39382 )";; 
-    dups2_test "'(1 (2 3))";;
-    dups2_test "'((1 2) (2 3))";;
-    dups2_test "\"This is a string\"";;
-    let tbl_test x = cons_tbl(dups2_test x) ;;
-    tbl_test "\"This is first string\" \"This is second string\" ";;
-     (* ----------TESTS-END----------- *)
 
   (*  expr' list -> (constant * ('a * string)) list *)
   let make_consts_tbl asts = raise X_not_yet_implemented;;
