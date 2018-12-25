@@ -181,16 +181,17 @@ let t1 = table_eq (tbl_test "\"This is first string\" \"This is second string\" 
                       (Sexpr (String "This is second string"),
                       (35, "MAKE_LITERAL_STRING(\"This is second string\")"))]);;
 let t2 = (tbl_test "1");;
-let t3 = (tbl_test "#t");;
-let t4 = tbl_test "1 #t \"str\"";;
-let t5 = tbl_test "(1 #t \"str\")";;
-let t6 = tbl_test "((1 2) (#t #f) \"str\")";;
+let t3 = (tbl_test "1.2");;
+let t4 = (tbl_test "#t");;
+let t5 = tbl_test "1 #t \"str\"";;
+let t6 = tbl_test "(1 #t \"str\")";;
+let t7 = tbl_test "((1 2) (#t #f) \"str\")";;
 (* let t6 = tbl_test "#(1 #t \"str\")";; *)
 (* let e4 = expand_test "()";; *)
 (* let t4 = (tbl_test "()");; *)
 (* let e5 = (expand_test "'c");; *)
 (* let t5 = tbl_test "'c";; *)
-let t7 = (tbl_test "(list \"ab\" '(1 2) 'c 'ab)");;
+let t8 = (tbl_test "(list \"ab\" '(1 2) 'c 'ab)");;
 (* TODO: add more tests *)
 
 let table_test = [(1, t1)];;
