@@ -185,12 +185,13 @@ let t3 = (tbl_test "#t");;
 let t4 = tbl_test "1 #t \"str\"";;
 let t5 = tbl_test "(1 #t \"str\")";;
 let t6 = tbl_test "((1 2) (#t #f) \"str\")";;
+let t7 = tbl_test "1 2 1 (1 2)";;
 (* let t6 = tbl_test "#(1 #t \"str\")";; *)
 (* let e4 = expand_test "()";; *)
 (* let t4 = (tbl_test "()");; *)
-(* let e5 = (expand_test "'c");; *)
+let e5 = (expand_test "'c");;
 (* let t5 = tbl_test "'c";; *)
-let t7 = (tbl_test "(list \"ab\" '(1 2) 'c 'ab)");;
+let t8 = (tbl_test "(list \"ab\" '(1 2) 'c 'ab)");;
 (* TODO: add more tests *)
 
 let table_test = [(1, t1)];;

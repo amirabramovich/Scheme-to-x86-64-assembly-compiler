@@ -759,3 +759,60 @@ Def' (Var' (VarFree "foo6"),
 
                           (* expand_lst cdr [currCar; currCdr; car] @ newLst *)
 
+
+
+25.12, 22.44
+*****
+
+
+  (* [(Void, 0, "MAKE_VOID");
+  (Sexpr(Nil), 1, "MAKE_NIL");
+  (Sexpr(Bool false), 2, "MAKE_BOOL(0)");
+  (Sexpr(Bool true), 4, "MAKE_BOOL(1)");
+  (Sexpr(String "ab"), 6, "MAKE_LITERAL_STRING(\"ab\")");
+  (Sexpr(Number(Int 1)), 17, "MAKE_LITERAL_INT(1)");
+  (Sexpr(Number(Int 2)), 26, "MAKE_LITERAL_INT(2)");
+  (Sexpr(Pair(Number(Int 2),
+  Nil)), 35, "MAKE_LITERAL(consts+26, consts+1");
+  (Sexpr(Pair(Number(Int 1),
+  Pair(Number(Int 2)), Nil)), 52, "MAKE_LITERAL(consts+17, consts+35");
+  (Sexpr(String "c"), 69, "MAKE_LITERAL_STRING(\"c\")");
+  (Sexpr(Symbol "c"), 79, "MAKE_LITERAL_SYMBOL(consts+69)");
+  (Sexpr(Symbol "ab"), 88, "MAKE_LITERAL_SYMBOL(consts+6)")] *)
+
+
+Amir tests 25.12
+
+scan_test "1";;
+scan_test "1 1";;
+scan_test "'(1)";;
+scan_test "'(1 2 3 4)";;
+scan_test "(foo 2)";;
+scan_test "(+ 1 2)";;
+scan_test "'a";;
+scan_test "'(1 (2 3))";;
+scan_test "'(1 .(2 3))";;
+scan_test "#( #t )";;
+scan_test "#( 37392 )";;
+scan_test "#( 37392.39382 )";;
+scan_test "#( #\\c 37392.39382 )";; 
+dups_test "1";;
+dups_test "1 1";; 
+dups_test "'(1 (2 3))";; 
+dups_test "#( #\\c 37392.39382 )";; 
+
+expand_test "1";;
+expand_test "1 1";; 
+expand_test "'a";;
+expand_test "'(1)";;
+expand_test "#( #\\c 37392.39382 )";; 
+expand_test "'(1 (2 3))";; 
+
+dups2_test "1";;
+dups2_test "1 1";; 
+dups2_test "'a";;
+dups2_test "'(1)";;
+dups2_test "#( #\\c 37392.39382 )";; 
+dups2_test "'(1 (2 3))";;
+dups2_test "'((1 2) (2 3))";;
+dups2_test "\"This is a string\"";;
