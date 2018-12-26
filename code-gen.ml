@@ -9,18 +9,24 @@ module type CODE_GEN = sig
   (* TODO: delete later *)
   val scan_ast : expr' list -> sexpr list
   val remove_dups : 'a list -> 'a list
-  val filter_const : sexpr list -> sexpr list
   val expand_lst : sexpr list -> sexpr list
+  val cons_tbl : sexpr list -> (constant * (int * string)) list
 end;;
 
 module Code_Gen : CODE_GEN = struct
 
 
-  (* 25.12, 22.37 update
-    TODO:
-        .1. In cons_tbl: implement pair & vector & char.
+  (* 26.12, 02:55 update
+      Done:
+        .1. Add vector to cons_tbl.
+        .2. Add tests for pair & vector.
+        .3. A bit order
+  
+      TODO:
+        .1. check: pair & vector & char.
         .2. Add tests.
-        .3. check and fix pair in cons_tbl.
+        .3. Document code (and tests).
+        .4. Order in code (and tests).
   *)
 
 
@@ -29,7 +35,7 @@ module Code_Gen : CODE_GEN = struct
     match asts with
       | car :: cdr -> (match car with
                         | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
-                        | Applic' (_,exprs) -> scan_ast cdr consts @ (scan_ast exprs consts) 
+                        | Applic' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
                         | _ -> scan_ast cdr consts)
       | _ -> consts ;;
 
@@ -40,17 +46,6 @@ module Code_Gen : CODE_GEN = struct
     match lst with
       | [] -> []
       | car :: cdr -> car :: (remove_dups (List.filter (fun e -> e <> car) cdr)) ;;
-
-  let rec filter_const lst const = 
-    match lst with
-      | car :: cdr ->
-          (match car with
-            | Bool _ | Number _ | Nil | Char _ | String _ | Symbol _ | Pair _ | Vector _ -> 
-              if List.mem car const then filter_const cdr const else filter_const cdr (const @ [car])
-            | _ -> filter_const cdr const) (* TODO: fix warning *)
-      | [] -> const;;
-
-  let filter_const lst = filter_const lst [];;
 
   (* 3. Expand list include all sub-constants, list should be sorted topologically, Logic of code from ps #11, 2.2.1 *)
   let rec expand_lst lst newLst =
@@ -63,13 +58,13 @@ module Code_Gen : CODE_GEN = struct
                 let vecLst = expand_lst elems [] in
                 expand_lst cdr (newLst @ vecLst @ [car])
             | _ -> expand_lst cdr ([car] @ newLst))
-            (* | Nil -> raise X_not_yet_impleneted *)
       | [] -> newLst ;;
 
   let expand_lst lst = expand_lst lst [] ;;
 
-  let rec size_of expr =
-    match expr with
+  (* Helper func, got sexpr, return size_of it *)
+  let rec size_of sexpr =
+    match sexpr with
       | Nil -> 1
       | Bool _ | Char _ -> 2
       | Number _ | Symbol _ -> 9
@@ -79,39 +74,39 @@ module Code_Gen : CODE_GEN = struct
 
   let get_const const tbl = List.assoc const tbl;;
 
+  (* Helper func, got const and tbl, return addr of const *)
   let get_const_addr const tbl =
     let (addr, _) = get_const const tbl 
   in addr;;
 
-  let sexp_eq s1 s2 = (* s1 = Sexpr (String str1), s2 = Sexpr(String str2) *)
-    match s1, s2 with
-      | (Symbol sym), (String str) -> sym = str
-      | (Number n1), (Number n2) -> n1 = n2
-      | (Bool b1), (Bool b2) -> b1 = b2
-      | s_1, s_2 -> s_1 = s_2;;
+  (* Helper func for parse vec to tbl, got vec and tbl => return string of consts + addr of all elems in vec *)
+  let vec_const vec tbl = 
+    let lst_string = List.map (fun s -> "consts+" ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
+    String.concat ", " lst_string;;
 
-  let rec orig_addr s tbl = 
-    let filt = List.map (fun (_,(a, _)) -> a) (List.filter (fun (Sexpr sexpr, (_, _)) -> sexp_eq s sexpr) tbl) in
-    if (List.length filt) = 0 then -1 else (List.nth filt 0);;
-
+  (* Cons_tbl helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
   let rec cons_tbl consts tbl addr =
     match consts with
     | car :: cdr -> 
       (match car with
-        | Char ch -> raise X_not_yet_implemented
+        | Bool _ | Nil -> cons_tbl cdr tbl addr
+        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ String.make 1 ch ^ ")" ))]) (addr + size_of car)
         | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
         | Number(Int num) -> 
           cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
         | Number(Float num) -> 
           cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ")"))]) (addr + size_of car)
         | Symbol sym -> 
-          cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(consts+" ^ string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ")"))]) (addr + size_of car) 
+          cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(consts+" ^ 
+            string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ")"))]) (addr + size_of car) 
         | Pair (f, s) -> 
-          cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(consts+" ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ ", consts+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ")"))]) (addr + size_of car)
-        | Vector v -> raise X_not_yet_implemented 
-        | _ -> raise X_syntax_error) 
+          cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(consts+" ^ 
+            string_of_int (get_const_addr (Sexpr f) tbl) ^ ", consts+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ")"))]) (addr + size_of car)
+        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR(" ^ vec_const vec tbl ^ ")")]) (addr + size_of car)
+        | _ -> raise X_syntax_error)
     | [] -> tbl ;;
     
+  (* Cons_tbl main func *)
   let cons_tbl consts = cons_tbl consts [
     (Void, (0, "MAKE_VOID"));
     (Sexpr(Nil), (1, "MAKE_NIL"));

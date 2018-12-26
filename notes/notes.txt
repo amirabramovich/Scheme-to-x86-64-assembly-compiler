@@ -816,3 +816,56 @@ dups2_test "#( #\\c 37392.39382 )";;
 dups2_test "'(1 (2 3))";;
 dups2_test "'((1 2) (2 3))";;
 dups2_test "\"This is a string\"";;
+
+
+
+25.12 removed funcs 
+
+  let sexp_eq s1 s2 = (* s1 = Sexpr (String str1), s2 = Sexpr(String str2) *)
+    match s1, s2 with
+      | (Symbol sym), (String str) -> sym = str
+      | (Number n1), (Number n2) -> n1 = n2
+      | (Bool b1), (Bool b2) -> b1 = b2
+      | s_1, s_2 -> s_1 = s_2;;
+
+  (*  *)
+  let rec orig_addr s tbl = 
+    let filt = List.map (fun (_,(a, _)) -> a) (List.filter (fun (Sexpr sexpr, (_, _)) -> sexp_eq s sexpr) tbl) in
+    if (List.length filt) = 0 then -1 else (List.nth filt 0);;
+
+
+  val filter_const : sexpr list -> sexpr list
+
+
+      let rec filter_const lst const = 
+    match lst with
+      | car :: cdr ->
+          (match car with
+            | Bool _ | Number _ | Nil | Char _ | String _ | Symbol _ | Pair _ | Vector _ -> 
+              if List.mem car const then filter_const cdr const else filter_const cdr (const @ [car])
+            | _ -> filter_const cdr const) (* TODO: fix warning *)
+      | [] -> const;;
+
+  let filter_const lst = filter_const lst [];;
+
+
+  in cons_tbl
+
+            (* let lst_const = List.map (fun elem -> cons_tbl [elem] tbl (addr + size_of elem)) vec in
+          let merge = List.fold_right (fun l1 l2 -> l1 @ l2) lst_const (List.nth lst_const 0) in
+          remove_dups merge *)
+
+
+
+          in tests
+          
+let filt_test x = filter_const (expand_test x) ;;
+
+          (* Filt cond test *)
+let f1 = sexprs_eq (filt_test "'(1 (2 3))") (  [Number (Int 1); Number (Int 2); Number (Int 3); Nil;
+                                                  Pair (Number (Int 3), Nil);
+                                                  Pair (Number (Int 2), Pair (Number (Int 3), Nil));
+                                                  Pair (Pair (Number (Int 2), Pair (Number (Int 3), Nil)), Nil);
+                                                  Pair (Number (Int 1),
+                                                  Pair (Pair (Number (Int 2), Pair (Number (Int 3), Nil)), Nil))]);;
+let f2 = filt_test "(list \"ab\" '(1 2) 'c 'ab)";;
