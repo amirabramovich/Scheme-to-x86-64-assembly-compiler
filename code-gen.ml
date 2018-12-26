@@ -1,9 +1,9 @@
 #use "semantic-analyser.ml";;
 
 module type CODE_GEN = sig
-  val make_consts_tbl : expr' list -> (constant * ('a * string)) list
-  val make_fvars_tbl : expr' list -> (string * 'a) list
-  val generate : (constant * ('a * string)) list -> (string * 'a) list -> expr' -> string
+  val make_consts_tbl : expr' list -> (constant * (int * string)) list
+  val make_fvars_tbl : expr' list -> (string * int) list
+  val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
 
   (* Add funcs for tests *)
   (* TODO: delete later *)
@@ -15,6 +15,15 @@ end;;
 
 module Code_Gen : CODE_GEN = struct
 
+
+  (* 27.12, 10:00 update
+      Done:
+        .1. make_consts_tbl : expr' list -> (constant * (int * string)) list
+        .2. make_fvars_tbl : expr' list -> (string * int) list
+
+      TODO:
+        .1. make tests for them both.
+  *)
 
   (* 26.12, 02:55 update
       Done:
@@ -102,8 +111,7 @@ module Code_Gen : CODE_GEN = struct
         | Pair (f, s) -> 
           cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(consts+" ^ 
             string_of_int (get_const_addr (Sexpr f) tbl) ^ ", consts+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ")"))]) (addr + size_of car)
-        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR(" ^ vec_const vec tbl ^ ")")]) (addr + size_of car)
-        | _ -> raise X_syntax_error)
+        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR(" ^ vec_const vec tbl ^ ")")]) (addr + size_of car))
     | [] -> tbl ;;
     
   (* Cons_tbl main func *)
@@ -115,12 +123,33 @@ module Code_Gen : CODE_GEN = struct
     ] 6;;
     
 
-  (*  expr' list -> (constant * ('a * string)) list *)
-  let make_consts_tbl asts = raise X_not_yet_implemented;;
+  (*  expr' list -> (constant * (int * string)) list *)
+  let make_consts_tbl asts = cons_tbl(remove_dups(expand_lst(remove_dups(scan_ast asts))));;
 
+  (* ----------------------fvar table---------------------- *)
+  let rec scan_fvars asts fvars = 
+    match asts with
+      | car :: cdr -> (match car with
+                        | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
+                        | Applic' (op, exprs) -> scan_fvars cdr fvars @ (scan_fvars ([op] @ exprs) fvars) 
+                        | _ -> scan_fvars cdr fvars)
+      | _ -> fvars ;;
 
-  (* expr' list -> (string * 'a) list *)
-  let make_fvars_tbl asts = raise X_not_yet_implemented;;
+  let scan_fvars asts = scan_fvars asts [] ;;
+
+  let rec cons_fvars fvars tbl addr =
+    match fvars with
+    | car :: cdr -> cons_fvars cdr (tbl @ [(car,addr)]) (addr + 1)
+    | [] -> tbl ;;
+    
+  let cons_fvars fvars = cons_fvars fvars [
+    ("car", 0);
+    ("cdr", 1);
+    ("map", 2)]
+    3;;
+
+  (* expr' list -> (string * int) list *)
+  let make_fvars_tbl asts = cons_fvars(remove_dups(scan_fvars asts));;
 
 
   (* (constant * ('a * string)) list -> (string * 'a) list -> expr' -> string *)
