@@ -3,7 +3,7 @@
 module type CODE_GEN = sig
   val make_consts_tbl : expr' list -> (constant * (int * string)) list
   val make_fvars_tbl : expr' list -> (string * int) list
-  val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
+  val generate : (constant * (int * string)) list -> (string * int) list -> int -> expr' -> string
 
   (* Add funcs for tests *)
   (* TODO: delete later *)
@@ -16,13 +16,15 @@ end;;
 module Code_Gen : CODE_GEN = struct
 
 
-  (* 27.12, 10:00 update
+  (* 27.12, 12:45 update
       Done:
         .1. make_consts_tbl : expr' list -> (constant * (int * string)) list
         .2. make_fvars_tbl : expr' list -> (string * int) list
+        .3. started working on generate .
 
       TODO:
-        .1. make tests for them both.
+        .1. make tests .
+        .2. finish generate .
   *)
 
   (* 26.12, 02:55 update
@@ -151,8 +153,74 @@ module Code_Gen : CODE_GEN = struct
   (* expr' list -> (string * int) list *)
   let make_fvars_tbl asts = cons_fvars(remove_dups(scan_fvars asts));;
 
+  let get_fvar_addr fvar tbl = List.assoc fvar tbl;;
 
-  (* (constant * ('a * string)) list -> (string * 'a) list -> expr' -> string *)
-  let generate consts fvars e = raise X_not_yet_implemented;;
+  (* (constant * (int * string)) list -> (string * int) list -> int -> expr' -> string *)
+  (* consts table * fvars table * counter * single expr *)
+  (* we need counter in order to make multiple lables. the caller of "generate" will increase counter each call.*)
+  let rec generate consts fvars count e= 
+    match e with
+    | Const' expr -> "mov rax, " ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
+    | Var'(VarParam(_,pos)) -> "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
+    | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars count expr) ^ "\n" ^
+                                            "mov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
+                                            "mov rax, sob_void\n"
+    | Var'(VarBound(_,depth,pos)) -> "mov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                      "mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                      "mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" 
+    | Set'(Var'(VarBound(_,depth,pos)),expr) -> (generate consts fvars count expr) ^ "\n" ^
+                                                "mov rbx, qword [rbp + 8 ∗ 2]\n" ^
+                                                "mov rbx, qword [rbx + 8 ∗ "^(string_of_int depth)^"]\n"^
+                                                "mov qword [rbx + 8 ∗ "^(string_of_int pos)^"], rax\n" ^
+                                                "mov rax, sob_void\n"
+    | Var'(VarFree v) -> "mov rax, qword ["^ (string_of_int(get_fvar_addr v fvars)) ^"]\n"
+    | Set'(Var'(VarFree(v)),expr) -> (generate consts fvars count expr) ^ "\n" ^
+                                      "mov qword ["^(string_of_int(get_fvar_addr v fvars))^"], rax\n"^
+                                      "mov rax, sob_void\n"
+    | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars count) exprs)
+    | Or'(exprs) -> let or_gen consts fvars count expr =
+                      (generate consts fvars count expr) ^ "\n" ^
+                      "cmp rax, sob_false\n" ^
+                      "jne LexitOr"^(string_of_int count)^"\n" in
+                      String.concat "\n" (List.map (or_gen consts fvars count) exprs) ^
+                      "LexitOr"^(string_of_int count)^":\n"
+    | If'(test, dit, dif) -> (generate consts fvars count test) ^ "\n" ^
+                              "cmp rax, sob_false\n" ^
+                              "je Lelse"^(string_of_int count)^"\n"^
+                              (generate consts fvars count dit) ^ "\n" ^
+                              "jmp LexitIf"^(string_of_int count)^"\n"^
+                              "Lelse"^(string_of_int count)^":\n"^
+                              (generate consts fvars count dif) ^ "\n" ^
+                              "LexitIF"^(string_of_int count)^":\n"
+    | BoxGet'(VarParam(_,pos)) -> "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+                                  "mov rax, qword [rax]\n"
+    | BoxGet'(VarBound(_,depth,pos)) -> "mov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                        "mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                        "mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+                                        "mov rax, qword [rax]\n"
+    | BoxSet'(VarParam(_,pos),expr) -> (generate consts fvars count expr) ^ "\n" ^
+                                        "push rax\n" ^
+                                        "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+                                        "pop qword [rax]\n" ^
+                                        "mov rax, sob_void\n"
+    | BoxSet'(VarBound(_,depth,pos),expr) -> (generate consts fvars count expr) ^ "\n" ^
+                                             "push rax\n" ^
+                                             "mov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                             "mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                             "mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+                                             "pop qword [rax]\n" ^
+                                             "mov rax, sob_void\n"
+    | LambdaSimple'(vars, body) -> "Lcode"^(string_of_int count)^":\n"^
+                                    "push rbp\n"^
+                                    "mov rbp , rsp\n"^
+                                    (generate consts fvars count body) ^ "\n" ^
+                                    "leave\n"^
+                                    "ret\n"^
+                                    "Lcont"^(string_of_int count)^":\n"
+    | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
+    | Applic'(op, args) -> raise X_not_yet_implemented
+    | ApplicTP'(op, args) -> raise X_not_yet_implemented
+    | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
+
 end;;
 
