@@ -5,6 +5,10 @@ module type CODE_GEN = sig
   val make_fvars_tbl : expr' list -> (string * int) list
   val generate : (constant * (int * string)) list -> (string * int) list -> int -> expr' -> string
 
+  (* added for use in compiler.ml *)
+  val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
+  val get_fvar_addr : 'a -> ('a * 'b) list -> 'b
+
   (* Add funcs for tests *)
   (* TODO: delete later *)
   val scan_ast : expr' list -> sexpr list
@@ -145,10 +149,38 @@ module Code_Gen : CODE_GEN = struct
     | [] -> tbl ;;
     
   let cons_fvars fvars = cons_fvars fvars [
-    ("car", 0);
-    ("cdr", 1);
-    ("map", 2)]
-    3;;
+    "boolean?", 0;
+    "float?", 1; 
+    "integer?", 2;
+    "pair?", 3;
+    "null?", 4;
+    "char?", 5; 
+    "vector?", 6; 
+    "string?", 7;
+    "procedure?",8;
+    "symbol?", 9;
+    "string-length", 10;
+    "string-ref", 11; 
+    "string-set!", 12; 
+    "make-string", 13;
+    "vector-length", 14;
+    "vector-ref", 15; 
+    "vector-set!", 16;
+    "make-vector", 17;
+    "symbol->string", 18; 
+    "char->integer", 19;
+    "integer->char", 20; 
+    "eq?", 21;
+    "+", 22;
+    "*", 23; 
+    "-", 24; 
+    "/", 25; 
+    "<", 26;
+    "=", 27;
+    ("car", 28);
+    ("cdr", 29);
+    ("map", 30)]
+    31;;
 
   (* expr' list -> (string * int) list *)
   let make_fvars_tbl asts = cons_fvars(remove_dups(scan_fvars asts));;
@@ -160,7 +192,7 @@ module Code_Gen : CODE_GEN = struct
   (* we need counter in order to make multiple lables. the caller of "generate" will increase counter each call.*)
   let rec generate consts fvars count e= 
     match e with
-    | Const' expr -> "mov rax, " ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
+    | Const' (expr) -> "mov rax, " ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
     | Var'(VarParam(_,pos)) -> "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
     | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars count expr) ^ "\n" ^
                                             "mov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^

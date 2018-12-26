@@ -19,11 +19,11 @@ let primitive_names_to_labels =
    "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
    "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
    "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ"
-(* you can add yours here *)];;
+(* you can add yours here *)];; (*TODO: check if need to add here car,cdr,map*)
 
 let make_prologue consts_tbl fvars_tbl =
-  let get_const_address const = raise X_not_yet_implemented in
-  let get_fvar_address const = raise X_not_yet_implemented in
+  let get_const_address const = "const_tbl+"^string_of_int(Code_Gen.get_const_addr const consts_tbl) in
+  let get_fvar_address const = "fvar_tbl+"^string_of_int(Code_Gen.get_fvar_addr const fvars_tbl) in
   let make_primitive_closure (prim, label) =
 "    MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, " ^ label  ^ ")
     mov [" ^ (get_fvar_address prim)  ^ "], rax" in
@@ -53,6 +53,7 @@ fvar_tbl:
 " ^ (String.concat "\n" (List.map (fun _ -> "dq T_UNDEFINED") fvars_tbl)) ^ "
 
 section .text
+global main
 main:
     ;; set up the heap
     mov rdi, GB(4)
@@ -82,18 +83,20 @@ code_fragment:
 " ^ (String.concat "\n" (List.map make_primitive_closure primitive_names_to_labels)) ^ "
  
 ";;
-
-let epilogue = raise X_not_yet_implemented;;
+(* TODO: add here implementation of functions*)
+let epilogue = " ";;
 
 exception X_missing_input_file;;
 
 try
   let infile = Sys.argv.(1) in
-  let code =  (file_to_string "stdlib.scm") ^ (file_to_string infile) in
+  let code =  (*TODO: remove the comment below when all cases in generator in code-gen are done*)
+    (* (file_to_string "stdlib.scm") ^  *)
+  (file_to_string infile) in
   let asts = string_to_asts code in
   let consts_tbl = Code_Gen.make_consts_tbl asts in
   let fvars_tbl = Code_Gen.make_fvars_tbl asts in
-  let generate = Code_Gen.generate consts_tbl fvars_tbl in
+  let generate = Code_Gen.generate consts_tbl fvars_tbl 0 in (*TODO: change "0" to number generator in mapping func below*)
   let code_fragment = String.concat "\n\n"
                         (List.map
                            (fun ast -> (generate ast) ^ "\n    call write_sob_if_not_void")
