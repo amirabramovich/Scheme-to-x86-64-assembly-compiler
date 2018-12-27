@@ -105,27 +105,27 @@ module Code_Gen : CODE_GEN = struct
     | car :: cdr -> 
       (match car with
         | Bool _ | Nil -> cons_tbl cdr tbl addr
-        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ String.make 1 ch ^ ")" ))]) (addr + size_of car)
-        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING(\"" ^ expr ^ "\")"))]) (addr + size_of car)
+        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR('" ^ String.make 1 ch ^ "') ;my address is "^ (string_of_int addr) ))]) (addr + size_of car)
+        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING \"" ^ expr ^ "\" ;my address is "^ (string_of_int addr)))]) (addr + size_of car)
         | Number(Int num) -> 
-          cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ")"))]) (addr + size_of car)
+          cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ;my address is "^ (string_of_int addr)))]) (addr + size_of car)
         | Number(Float num) -> 
-          cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ")"))]) (addr + size_of car)
+          cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ") ;my address is "^ (string_of_int addr)))]) (addr + size_of car)
         | Symbol sym -> 
           cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl+" ^ 
-            string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ")"))]) (addr + size_of car) 
+            string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ") ;my address is "^ (string_of_int addr)))]) (addr + size_of car) 
         | Pair (f, s) -> 
           cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl+" ^ 
-            string_of_int (get_const_addr (Sexpr f) tbl) ^ ", const_tbl+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ")"))]) (addr + size_of car)
-        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR(" ^ vec_const vec tbl ^ ")")]) (addr + size_of car))
+            string_of_int (get_const_addr (Sexpr f) tbl) ^ ", const_tbl+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ") ;my address is "^ (string_of_int addr)))]) (addr + size_of car)
+        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec tbl ^" ;my address is "^ (string_of_int addr))]) (addr + size_of car))
     | [] -> tbl ;;
     
   (* Cons_tbl main func *)
   let cons_tbl consts = cons_tbl consts [
-    (Void, (0, "MAKE_VOID"));
-    (Sexpr(Nil), (1, "MAKE_NIL"));
-    (Sexpr(Bool false), (2, "MAKE_BOOL(0)"));
-    (Sexpr(Bool true), (4, "MAKE_BOOL(1)"));
+    (Void, (0, "MAKE_VOID ;my address is 0"));
+    (Sexpr(Nil), (1, "MAKE_NIL ;my address is 1"));
+    (Sexpr(Bool false), (2, "MAKE_BOOL(0) ;my address is 2"));
+    (Sexpr(Bool true), (4, "MAKE_BOOL(1) ;my address is 4"));
     ] 6;;
     
 

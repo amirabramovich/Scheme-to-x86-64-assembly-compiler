@@ -86,10 +86,16 @@
 %endmacro
 
 %define MAKE_LITERAL_INT(val) MAKE_LITERAL T_INTEGER, dq val
+%define MAKE_LITERAL_FLOAT(val) MAKE_LITERAL T_FLOAT, dq val
 %define MAKE_LITERAL_CHAR(val) MAKE_LITERAL T_CHAR, db val
 %define MAKE_NIL db T_NIL
 %define MAKE_VOID db T_VOID
 %define MAKE_BOOL(val) MAKE_LITERAL T_BOOL, db val
+
+%macro MAKE_LITERAL_SYMBOL 1
+db T_SYMBOL
+dq %1
+%endmacro
 
 ; Creates a short SOB with the
 ; value %2
@@ -135,6 +141,14 @@
 	sub %1, WORD_SIZE+TYPE_SIZE
 %endmacro
 
+%macro MAKE_LITERAL_STRING 1
+db T_STRING
+dq (%%end_str - %%str)
+%%str:
+db %1
+%%end_str:
+%endmacro
+
 ; Create a vector of length %2
 ; from SOB at %3.
 ; Stores result in register %1
@@ -155,6 +169,15 @@
 %%vec_loop_end:
 	sub %1, WORD_SIZE+TYPE_SIZE
 	pop rcx
+%endmacro
+
+%macro MAKE_LITERAL_VECTOR 0-*
+db T_VECTOR
+dq %0
+%rep %0
+dq %1
+%rotate 1
+%endrep
 %endmacro
 
 ;;; Creates a SOB with tag %2 
@@ -182,6 +205,8 @@
 %define MAKE_CLOSURE(r, env, body) \
         MAKE_TWO_WORDS r, T_CLOSURE, env, body
 
+%define MAKE_LITERAL_CLOSURE(body) \
+		MAKE_WORDS_LIT T_CLOSURE, 0, body
 	
 extern exit, printf, malloc
 global write_sob, write_sob_if_not_void
