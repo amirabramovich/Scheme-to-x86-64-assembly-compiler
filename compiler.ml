@@ -46,14 +46,14 @@ const_tbl:
 ;;; definitions in the epilogue to work properly
 %define SOB_VOID_ADDRESS " ^ get_const_address Void ^ "
 %define SOB_NIL_ADDRESS " ^ get_const_address (Sexpr Nil) ^ "
-%define SOB_FALSE_ADDRESS " ^ get_const_address (Sexpr (Bool true)) ^ "
-%define SOB_TRUE_ADDRESS " ^ get_const_address (Sexpr (Bool false)) ^ "
+%define SOB_FALSE_ADDRESS " ^ get_const_address (Sexpr (Bool false)) ^ "
+%define SOB_TRUE_ADDRESS " ^ get_const_address (Sexpr (Bool true)) ^ "
 
 fvar_tbl:
 " ^ (String.concat "\n" (List.map (fun _ -> "dq T_UNDEFINED") fvars_tbl)) ^ "
 
-section .text
 global main
+section .text
 main:
     ;; set up the heap
     mov rdi, GB(4)
@@ -99,7 +99,7 @@ try
   let generate = Code_Gen.generate consts_tbl fvars_tbl 0 in (*TODO: change "0" to number generator in mapping func below*)
   let code_fragment = String.concat "\n\n"
                         (List.map
-                           (fun ast -> (generate ast) ^ "\n    call write_sob_if_not_void")
+                           (fun ast -> (generate ast) ^ "\n    call write_sob_if_not_void\n    ret\n\n")
                            asts) in
   let provided_primitives = file_to_string "prims.s" in
                    

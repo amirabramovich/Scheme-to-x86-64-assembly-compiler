@@ -96,7 +96,7 @@ module Code_Gen : CODE_GEN = struct
 
   (* Helper func for parse vec to tbl, got vec and tbl => return string of consts + addr of all elems in vec *)
   let vec_const vec tbl = 
-    let lst_string = List.map (fun s -> "consts+" ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
+    let lst_string = List.map (fun s -> "const_tbl+" ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
     String.concat ", " lst_string;;
 
   (* Cons_tbl helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
@@ -112,11 +112,11 @@ module Code_Gen : CODE_GEN = struct
         | Number(Float num) -> 
           cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ")"))]) (addr + size_of car)
         | Symbol sym -> 
-          cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(consts+" ^ 
+          cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl+" ^ 
             string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ")"))]) (addr + size_of car) 
         | Pair (f, s) -> 
-          cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(consts+" ^ 
-            string_of_int (get_const_addr (Sexpr f) tbl) ^ ", consts+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ")"))]) (addr + size_of car)
+          cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl+" ^ 
+            string_of_int (get_const_addr (Sexpr f) tbl) ^ ", const_tbl+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ")"))]) (addr + size_of car)
         | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR(" ^ vec_const vec tbl ^ ")")]) (addr + size_of car))
     | [] -> tbl ;;
     
@@ -192,7 +192,7 @@ module Code_Gen : CODE_GEN = struct
   (* we need counter in order to make multiple lables. the caller of "generate" will increase counter each call.*)
   let rec generate consts fvars count e= 
     match e with
-    | Const' (expr) -> "mov rax, " ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
+    | Const' (expr) -> "mov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
     | Var'(VarParam(_,pos)) -> "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
     | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars count expr) ^ "\n" ^
                                             "mov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
