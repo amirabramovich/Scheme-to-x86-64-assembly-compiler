@@ -50,7 +50,11 @@ module Code_Gen : CODE_GEN = struct
     match asts with
       | car :: cdr -> (match car with
                         | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
-                        | Applic' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
+                        | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
+                        | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test]@[dit]@[dif]) consts) 
+                        | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
+                        | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) | BoxSet' (_,body) -> raise X_not_yet_implemented
+                        | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
                         | _ -> scan_ast cdr consts)
       | _ -> consts ;;
 
@@ -137,6 +141,7 @@ module Code_Gen : CODE_GEN = struct
     match asts with
       | car :: cdr -> (match car with
                         | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
+                        | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars) (*TODO: check if add more cases*)
                         | Applic' (op, exprs) -> scan_fvars cdr fvars @ (scan_fvars ([op] @ exprs) fvars) 
                         | _ -> scan_fvars cdr fvars)
       | _ -> fvars ;;
@@ -192,63 +197,66 @@ module Code_Gen : CODE_GEN = struct
   (* we need counter in order to make multiple lables. the caller of "generate" will increase counter each call.*)
   let rec generate consts fvars count e= 
     match e with
-    | Const' (expr) -> "mov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
-    | Var'(VarParam(_,pos)) -> "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
-    | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars count expr) ^ "\n" ^
-                                            "mov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
-                                            "mov rax, sob_void\n"
-    | Var'(VarBound(_,depth,pos)) -> "mov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                      "mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                      "mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" 
-    | Set'(Var'(VarBound(_,depth,pos)),expr) -> (generate consts fvars count expr) ^ "\n" ^
-                                                "mov rbx, qword [rbp + 8 ∗ 2]\n" ^
-                                                "mov rbx, qword [rbx + 8 ∗ "^(string_of_int depth)^"]\n"^
-                                                "mov qword [rbx + 8 ∗ "^(string_of_int pos)^"], rax\n" ^
-                                                "mov rax, sob_void\n"
-    | Var'(VarFree v) -> "mov rax, qword ["^ (string_of_int(get_fvar_addr v fvars)) ^"]\n"
-    | Set'(Var'(VarFree(v)),expr) -> (generate consts fvars count expr) ^ "\n" ^
-                                      "mov qword ["^(string_of_int(get_fvar_addr v fvars))^"], rax\n"^
-                                      "mov rax, sob_void\n"
+    | Const' (expr) -> "    mov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
+    | Var'(VarParam(_,pos)) -> "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
+    | Def'(Var'(VarFree(name)),expr) -> (generate consts fvars count expr) ^
+                                        "    mov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax\n" ^
+                                        "    mov rax, SOB_VOID_ADDRESS\n" 
+    | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars count expr) ^ 
+                                            "    mov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
+                                            "    mov rax, SOB_VOID_ADDRESS\n"
+    | Var'(VarBound(_,depth,pos)) -> "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                      "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                      "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" 
+    | Set'(Var'(VarBound(_,depth,pos)),expr) -> (generate consts fvars count expr) ^
+                                                "    mov rbx, qword [rbp + 8 ∗ 2]\n" ^
+                                                "    mov rbx, qword [rbx + 8 ∗ "^(string_of_int depth)^"]\n"^
+                                                "    mov qword [rbx + 8 ∗ "^(string_of_int pos)^"], rax\n" ^
+                                                "    mov rax, SOB_VOID_ADDRESS\n"
+    | Var'(VarFree v) -> "    mov rax, qword [fvar_tbl+"^ (string_of_int(get_fvar_addr v fvars)) ^"*WORD_SIZE]\n"
+    | Set'(Var'(VarFree(v)),expr) -> (generate consts fvars count expr) ^ 
+                                      "    mov qword [fvar_tbl+"^(string_of_int(get_fvar_addr v fvars))^"*WORD_SIZE], rax\n"^
+                                      "    mov rax, SOB_VOID_ADDRESS\n"
     | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars count) exprs)
     | Or'(exprs) -> let or_gen consts fvars count expr =
-                      (generate consts fvars count expr) ^ "\n" ^
-                      "cmp rax, sob_false\n" ^
-                      "jne LexitOr"^(string_of_int count)^"\n" in
+                      (generate consts fvars count expr) ^ 
+                      "    cmp rax, SOB_FALSE_ADDRESS\n" ^
+                      "    jne LexitOr"^(string_of_int count)^"\n" in
                       String.concat "\n" (List.map (or_gen consts fvars count) exprs) ^
-                      "LexitOr"^(string_of_int count)^":\n"
-    | If'(test, dit, dif) -> (generate consts fvars count test) ^ "\n" ^
-                              "cmp rax, sob_false\n" ^
-                              "je Lelse"^(string_of_int count)^"\n"^
-                              (generate consts fvars count dit) ^ "\n" ^
-                              "jmp LexitIf"^(string_of_int count)^"\n"^
-                              "Lelse"^(string_of_int count)^":\n"^
-                              (generate consts fvars count dif) ^ "\n" ^
-                              "LexitIF"^(string_of_int count)^":\n"
-    | BoxGet'(VarParam(_,pos)) -> "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
-                                  "mov rax, qword [rax]\n"
-    | BoxGet'(VarBound(_,depth,pos)) -> "mov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                        "mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                        "mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
-                                        "mov rax, qword [rax]\n"
-    | BoxSet'(VarParam(_,pos),expr) -> (generate consts fvars count expr) ^ "\n" ^
-                                        "push rax\n" ^
-                                        "mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
-                                        "pop qword [rax]\n" ^
-                                        "mov rax, sob_void\n"
-    | BoxSet'(VarBound(_,depth,pos),expr) -> (generate consts fvars count expr) ^ "\n" ^
-                                             "push rax\n" ^
-                                             "mov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                             "mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                             "mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
-                                             "pop qword [rax]\n" ^
-                                             "mov rax, sob_void\n"
-    | LambdaSimple'(vars, body) -> "Lcode"^(string_of_int count)^":\n"^
-                                    "push rbp\n"^
-                                    "mov rbp , rsp\n"^
-                                    (generate consts fvars count body) ^ "\n" ^
-                                    "leave\n"^
-                                    "ret\n"^
-                                    "Lcont"^(string_of_int count)^":\n"
+                      "    LexitOr"^(string_of_int count)^":\n"
+    | If'(test, dit, dif) -> (generate consts fvars count test) ^ 
+                              "    cmp rax, SOB_FALSE_ADDRESS\n" ^
+                              "    je Lelse"^(string_of_int count)^"\n"^
+                              (generate consts fvars count dit) ^ 
+                              "    jmp LexitIf"^(string_of_int count)^"\n"^
+                              "    Lelse"^(string_of_int count)^":\n"^
+                              (generate consts fvars count dif) ^ 
+                              "    LexitIf"^(string_of_int count)^":\n"
+    | BoxGet'(VarParam(_,pos)) -> "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+                                  "    mov rax, qword [rax]\n"
+    | BoxGet'(VarBound(_,depth,pos)) -> "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                        "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                        "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+                                        "    mov rax, qword [rax]\n"
+    | BoxSet'(VarParam(_,pos),expr) -> (generate consts fvars count expr) ^ 
+                                        "    push rax\n" ^
+                                        "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+                                        "    pop qword [rax]\n" ^
+                                        "    mov rax, SOB_VOID_ADDRESS\n"
+    | BoxSet'(VarBound(_,depth,pos),expr) -> (generate consts fvars count expr) ^ 
+                                             "    push rax\n" ^
+                                             "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                             "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                             "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+                                             "    pop qword [rax]\n" ^
+                                             "    mov rax, SOB_VOID_ADDRESS\n"
+    | LambdaSimple'(vars, body) -> "    Lcode"^(string_of_int count)^":\n"^
+                                    "    push rbp\n"^
+                                    "    mov rbp , rsp\n"^
+                                    (generate consts fvars count body) ^ 
+                                    "    leave\n"^
+                                    "    ret\n"^
+                                    "    Lcont"^(string_of_int count)^":\n"
     | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
     | Applic'(op, args) -> raise X_not_yet_implemented
     | ApplicTP'(op, args) -> raise X_not_yet_implemented
