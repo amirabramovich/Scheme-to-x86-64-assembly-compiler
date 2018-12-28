@@ -65,6 +65,8 @@ let dups2_test x = remove_dups (expand_test x) ;;
 
 let tbl_test x = cons_tbl (dups2_test x) ;;
 
+let fvars_tbl_test x = make_fvars_tbl(multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
+
 (* Compare sexprs *)
 (* Note: if 2 lists diff' length => List.combine raise exception Invalid_argument *)
 let sexprs_eq slist1 slist2 =

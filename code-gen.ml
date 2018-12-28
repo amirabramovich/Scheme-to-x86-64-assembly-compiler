@@ -148,47 +148,20 @@ module Code_Gen : CODE_GEN = struct
 
   let scan_fvars asts = scan_fvars asts [] ;;
 
+  let saved_fvars = ["boolean?"; "float?"; "integer?"; "pair?"; "null?"; "char?"; "vector?";
+  "string?"; "procedure?"; "symbol?"; "string-length"; "string-ref"; "string-set!"; "make-string";
+  "vector-length"; "vector-ref"; "vector-set!"; "make-vector"; "symbol->string"; "char->integer"; "integer->char";
+  "eq?"; "+"; "*"; "-"; "/"; "<"; "="];;
+
   let rec cons_fvars fvars tbl addr =
     match fvars with
-    | car :: cdr -> cons_fvars cdr (tbl @ [(car,addr)]) (addr + 1)
+    | car :: cdr -> cons_fvars cdr (tbl @ [(car,addr)]) (addr + 1) 
     | [] -> tbl ;;
     
-  let cons_fvars fvars = cons_fvars fvars [
-    "boolean?", 0;
-    "float?", 1; 
-    "integer?", 2;
-    "pair?", 3;
-    "null?", 4;
-    "char?", 5; 
-    "vector?", 6; 
-    "string?", 7;
-    "procedure?",8;
-    "symbol?", 9;
-    "string-length", 10;
-    "string-ref", 11; 
-    "string-set!", 12; 
-    "make-string", 13;
-    "vector-length", 14;
-    "vector-ref", 15; 
-    "vector-set!", 16;
-    "make-vector", 17;
-    "symbol->string", 18; 
-    "char->integer", 19;
-    "integer->char", 20; 
-    "eq?", 21;
-    "+", 22;
-    "*", 23; 
-    "-", 24; 
-    "/", 25; 
-    "<", 26;
-    "=", 27;
-    ("car", 28);
-    ("cdr", 29);
-    ("map", 30)]
-    31;;
+  let cons_fvars fvars = cons_fvars (remove_dups(saved_fvars@fvars)) [] 0;;
 
   (* expr' list -> (string * int) list *)
-  let make_fvars_tbl asts = cons_fvars(remove_dups(scan_fvars asts));;
+  let make_fvars_tbl asts = cons_fvars(scan_fvars asts);;
 
   let get_fvar_addr fvar tbl = List.assoc fvar tbl;;
 
