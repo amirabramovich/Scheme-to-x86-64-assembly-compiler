@@ -96,7 +96,7 @@ try
   let asts = string_to_asts code in
   let consts_tbl = Code_Gen.make_consts_tbl asts in
   let fvars_tbl = Code_Gen.make_fvars_tbl asts in
-  let generate = Code_Gen.generate consts_tbl fvars_tbl 0 in (*TODO: change "0" to number generator in mapping func below*)
+  let generate = Code_Gen.generate consts_tbl fvars_tbl in 
   let code_fragment = String.concat "\n"
                         (List.map
                            (fun ast -> (generate ast) ^ "    call write_sob_if_not_void\n")

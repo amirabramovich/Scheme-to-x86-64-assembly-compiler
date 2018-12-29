@@ -3,9 +3,7 @@
 module type CODE_GEN = sig
   val make_consts_tbl : expr' list -> (constant * (int * string)) list
   val make_fvars_tbl : expr' list -> (string * int) list
-  val generate : (constant * (int * string)) list -> (string * int) list -> int -> expr' -> string
-
-  (* added for use in compiler.ml *)
+  val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
   val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
   val get_fvar_addr : 'a -> ('a * 'b) list -> 'b
 
@@ -17,33 +15,9 @@ module type CODE_GEN = sig
   val cons_tbl : sexpr list -> (constant * (int * string)) list
 end;;
 
+let count = (ref 0);;
+
 module Code_Gen : CODE_GEN = struct
-
-
-  (* 27.12, 12:45 update
-      Done:
-        .1. make_consts_tbl : expr' list -> (constant * (int * string)) list
-        .2. make_fvars_tbl : expr' list -> (string * int) list
-        .3. started working on generate .
-
-      TODO:
-        .1. make tests .
-        .2. finish generate .
-  *)
-
-  (* 26.12, 02:55 update
-      Done:
-        .1. Add vector to cons_tbl.
-        .2. Add tests for pair & vector.
-        .3. A bit order
-  
-      TODO:
-        .1. check: pair & vector & char.
-        .2. Add tests.
-        .3. Document code (and tests).
-        .4. Order in code (and tests).
-  *)
-
 
   (* 1. Scan the AST (one recursive pass) & collect the sexprs in all Const records - The result is a list of sexprs *)
   let rec scan_ast asts consts = 
@@ -165,71 +139,67 @@ module Code_Gen : CODE_GEN = struct
 
   let get_fvar_addr fvar tbl = List.assoc fvar tbl;;
 
-  (* (constant * (int * string)) list -> (string * int) list -> int -> expr' -> string *)
-  (* consts table * fvars table * counter * single expr *)
-  (* we need counter in order to make multiple lables. the caller of "generate" will increase counter each call.*)
-  let rec generate consts fvars count e= 
+  (* (constant * (int * string)) list -> (string * int) list -> expr' -> string *)
+  let rec generate consts fvars e = 
     match e with
     | Const' (expr) -> "    mov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
     | Var'(VarParam(_,pos)) -> "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
-    | Def'(Var'(VarFree(name)),expr) -> (generate consts fvars count expr) ^
+    | Def'(Var'(VarFree(name)),expr) -> (generate consts fvars expr) ^
                                         "    mov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax\n" ^
                                         "    mov rax, SOB_VOID_ADDRESS\n" 
-    | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars count expr) ^ 
+    | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars expr) ^ 
                                             "    mov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
                                             "    mov rax, SOB_VOID_ADDRESS\n"
     | Var'(VarBound(_,depth,pos)) -> "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
                                       "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
                                       "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" 
-    | Set'(Var'(VarBound(_,depth,pos)),expr) -> (generate consts fvars count expr) ^
+    | Set'(Var'(VarBound(_,depth,pos)),expr) -> (generate consts fvars expr) ^
                                                 "    mov rbx, qword [rbp + 8 ∗ 2]\n" ^
                                                 "    mov rbx, qword [rbx + 8 ∗ "^(string_of_int depth)^"]\n"^
                                                 "    mov qword [rbx + 8 ∗ "^(string_of_int pos)^"], rax\n" ^
                                                 "    mov rax, SOB_VOID_ADDRESS\n"
     | Var'(VarFree v) -> "    mov rax, qword [fvar_tbl+"^ (string_of_int(get_fvar_addr v fvars)) ^"*WORD_SIZE]\n"
-    | Set'(Var'(VarFree(v)),expr) -> (generate consts fvars count expr) ^ 
+    | Set'(Var'(VarFree(v)),expr) -> (generate consts fvars expr) ^ 
                                       "    mov qword [fvar_tbl+"^(string_of_int(get_fvar_addr v fvars))^"*WORD_SIZE], rax\n"^
                                       "    mov rax, SOB_VOID_ADDRESS\n"
-    | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars count) exprs)
-    | Or'(exprs) -> let or_gen consts fvars count expr =
-                      (generate consts fvars count expr) ^ 
+    | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars) exprs)
+    | Or'(exprs) -> let current = !count in
+                    count := !count +1;
+                    let or_gen consts fvars expr =
+                      (generate consts fvars expr) ^ 
                       "    cmp rax, SOB_FALSE_ADDRESS\n" ^
-                      "    jne LexitOr"^(string_of_int count)^"\n" in
-                      String.concat "\n" (List.map (or_gen consts fvars count) exprs) ^
-                      "    LexitOr"^(string_of_int count)^":\n"
-    | If'(test, dit, dif) -> (generate consts fvars count test) ^ 
+                      "    jne LexitOr"^(string_of_int current)^"\n" in
+                      String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
+                      "    LexitOr"^(string_of_int current)^":\n"
+    | If'(test, dit, dif) -> let current = !count in
+                              count := !count +1;
+                              (generate consts fvars test) ^ 
                               "    cmp rax, SOB_FALSE_ADDRESS\n" ^
-                              "    je Lelse"^(string_of_int count)^"\n"^
-                              (generate consts fvars count dit) ^ 
-                              "    jmp LexitIf"^(string_of_int count)^"\n"^
-                              "    Lelse"^(string_of_int count)^":\n"^
-                              (generate consts fvars count dif) ^ 
-                              "    LexitIf"^(string_of_int count)^":\n"
+                              "    je Lelse"^(string_of_int current)^"\n"^
+                              (generate consts fvars  dit) ^ 
+                              "    jmp LexitIf"^(string_of_int current)^"\n"^
+                              "    Lelse"^(string_of_int current)^":\n"^
+                              (generate consts fvars  dif) ^ 
+                              "    LexitIf"^(string_of_int current)^":\n"
     | BoxGet'(VarParam(_,pos)) -> "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
                                   "    mov rax, qword [rax]\n"
     | BoxGet'(VarBound(_,depth,pos)) -> "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
                                         "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
                                         "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
                                         "    mov rax, qword [rax]\n"
-    | BoxSet'(VarParam(_,pos),expr) -> (generate consts fvars count expr) ^ 
+    | BoxSet'(VarParam(_,pos),expr) -> (generate consts fvars expr) ^ 
                                         "    push rax\n" ^
                                         "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
                                         "    pop qword [rax]\n" ^
                                         "    mov rax, SOB_VOID_ADDRESS\n"
-    | BoxSet'(VarBound(_,depth,pos),expr) -> (generate consts fvars count expr) ^ 
+    | BoxSet'(VarBound(_,depth,pos),expr) -> (generate consts fvars expr) ^ 
                                              "    push rax\n" ^
                                              "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
                                              "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
                                              "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
                                              "    pop qword [rax]\n" ^
                                              "    mov rax, SOB_VOID_ADDRESS\n"
-    | LambdaSimple'(vars, body) -> "    Lcode"^(string_of_int count)^":\n"^
-                                    "    push rbp\n"^
-                                    "    mov rbp , rsp\n"^
-                                    (generate consts fvars count body) ^ 
-                                    "    leave\n"^
-                                    "    ret\n"^
-                                    "    Lcont"^(string_of_int count)^":\n"
+    | LambdaSimple'(vars, body) -> raise X_not_yet_implemented
     | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
     | Applic'(op, args) -> raise X_not_yet_implemented
     | ApplicTP'(op, args) -> raise X_not_yet_implemented
