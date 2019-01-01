@@ -34,7 +34,11 @@
 
 %define INT_VAL SKIP_TYPE_TAG
 
-%define CHAR_VAL SKIP_TYPE_TAG
+;TODO:this is old! new is commented.
+%define CHAR_VAL SKIP_TYPE_TAG 
+; %macro CHAR_VAL 2
+; 	mov %1, byte [%2+TYPE_SIZE]
+; %endmacro
 
 %define FLOAT_VAL SKIP_TYPE_TAG
 
@@ -268,7 +272,7 @@ write_sob_char:
 	mov rbp, rsp
 
 	CHAR_VAL rsi, rsi
-	and rsi, 255
+	and rsi, 255 ;TODO: check if remove
 
 	cmp rsi, CHAR_NUL
 	je .Lnul

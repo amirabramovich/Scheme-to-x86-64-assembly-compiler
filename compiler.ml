@@ -55,6 +55,8 @@ fvar_tbl:
 global main
 section .text
 main:
+    push rbp 
+    mov rbp, rsp
     ;; set up the heap
     mov rdi, GB(4)
     call malloc
@@ -70,9 +72,7 @@ main:
     push qword T_UNDEFINED
     push rsp
 
-    call code_fragment
-    add rsp, 4*8
-    ret
+    jmp code_fragment
 
 code_fragment:
     ;; Set up the primitive stdlib fvars:
@@ -81,7 +81,7 @@ code_fragment:
     ;; This is where we emulate the missing (define ...) expressions
     ;; for all the primitive procedures.
 " ^ (String.concat "\n" (List.map make_primitive_closure primitive_names_to_labels)) ^ "
-    \n    ;; User's code begins here:\n
+    \nuser_code:
 ";;
 (* TODO: add here implementation of functions*)
 let epilogue = " ";;
@@ -104,7 +104,7 @@ try
   let provided_primitives = file_to_string "prims.s" in
                    
   print_string ((make_prologue consts_tbl fvars_tbl)  ^
-                  code_fragment ^ "    ret\n\n" ^
+                  code_fragment ^ "\tadd rsp, 4*8\n\tpop rbp\n\tret\n\n" ^
                     provided_primitives ^ "\n" ^ epilogue)
 
 with Invalid_argument(x) -> raise X_missing_input_file;;
