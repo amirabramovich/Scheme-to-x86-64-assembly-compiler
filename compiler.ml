@@ -10,16 +10,7 @@ let string_to_asts s = List.map Semantics.run_semantics
                          (Tag_Parser.tag_parse_expressions
                             (Reader.read_sexprs s));;
 
-let primitive_names_to_labels = 
-  ["boolean?", "is_boolean"; "float?", "is_float"; "integer?", "is_integer"; "pair?", "is_pair";
-   "null?", "is_null"; "char?", "is_char"; "vector?", "is_vector"; "string?", "is_string";
-   "procedure?", "is_procedure"; "symbol?", "is_symbol"; "string-length", "string_length";
-   "string-ref", "string_ref"; "string-set!", "string_set"; "make-string", "make_string";
-   "vector-length", "vector_length"; "vector-ref", "vector_ref"; "vector-set!", "vector_set";
-   "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
-   "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
-   "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ"
-(* you can add yours here *)];; (*TODO: check if need to add here car,cdr,map*)
+let primitive_names_to_labels = Code_Gen.primitive_names_to_labels;; 
 
 let make_prologue consts_tbl fvars_tbl =
   let get_const_address const = "const_tbl+"^string_of_int(Code_Gen.get_const_addr const consts_tbl) in

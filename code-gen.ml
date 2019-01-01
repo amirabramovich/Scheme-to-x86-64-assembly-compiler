@@ -6,6 +6,7 @@ module type CODE_GEN = sig
   val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
   val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
   val get_fvar_addr : 'a -> ('a * 'b) list -> 'b
+  val primitive_names_to_labels : (string * string) list
 
   (* Add funcs for tests *)
   (* TODO: delete later *)
@@ -122,10 +123,20 @@ module Code_Gen : CODE_GEN = struct
 
   let scan_fvars asts = scan_fvars asts [] ;;
 
-  let saved_fvars = ["boolean?"; "float?"; "integer?"; "pair?"; "null?"; "char?"; "vector?";
-  "string?"; "procedure?"; "symbol?"; "string-length"; "string-ref"; "string-set!"; "make-string";
-  "vector-length"; "vector-ref"; "vector-set!"; "make-vector"; "symbol->string"; "char->integer"; "integer->char";
-  "eq?"; "+"; "*"; "-"; "/"; "<"; "="];;
+  let primitive_names_to_labels = 
+    ["boolean?", "is_boolean"; "float?", "is_float"; "integer?", "is_integer"; "pair?", "is_pair";
+     "null?", "is_null"; "char?", "is_char"; "vector?", "is_vector"; "string?", "is_string";
+     "procedure?", "is_procedure"; "symbol?", "is_symbol"; "string-length", "string_length";
+     "string-ref", "string_ref"; "string-set!", "string_set"; "make-string", "make_string";
+     "vector-length", "vector_length"; "vector-ref", "vector_ref"; "vector-set!", "vector_set";
+     "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
+     "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
+     "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ"
+  (* you can add yours here *)];;(*TODO: check if need to add here car,cdr,map*)
+
+  let first (x,y) = x;;
+
+  let saved_fvars = List.map first primitive_names_to_labels;;
 
   let rec cons_fvars fvars tbl addr =
     match fvars with
@@ -142,63 +153,63 @@ module Code_Gen : CODE_GEN = struct
   (* (constant * (int * string)) list -> (string * int) list -> expr' -> string *)
   let rec generate consts fvars e = 
     match e with
-    | Const' (expr) -> "    mov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
-    | Var'(VarParam(_,pos)) -> "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
+    | Const' (expr) -> "\tmov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
+    | Var'(VarParam(_,pos)) -> "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
     | Def'(Var'(VarFree(name)),expr) -> (generate consts fvars expr) ^
-                                        "    mov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax\n" ^
-                                        "    mov rax, SOB_VOID_ADDRESS\n" 
+                                        "\tmov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax\n" ^
+                                        "\tmov rax, SOB_VOID_ADDRESS\n" 
     | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars expr) ^ 
-                                            "    mov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
-                                            "    mov rax, SOB_VOID_ADDRESS\n"
-    | Var'(VarBound(_,depth,pos)) -> "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                      "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                      "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" 
+                                            "\tmov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
+                                            "\tmov rax, SOB_VOID_ADDRESS\n"
+    | Var'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                      "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                      "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" 
     | Set'(Var'(VarBound(_,depth,pos)),expr) -> (generate consts fvars expr) ^
-                                                "    mov rbx, qword [rbp + 8 ∗ 2]\n" ^
-                                                "    mov rbx, qword [rbx + 8 ∗ "^(string_of_int depth)^"]\n"^
-                                                "    mov qword [rbx + 8 ∗ "^(string_of_int pos)^"], rax\n" ^
-                                                "    mov rax, SOB_VOID_ADDRESS\n"
-    | Var'(VarFree v) -> "    mov rax, qword [fvar_tbl+"^ (string_of_int(get_fvar_addr v fvars)) ^"*WORD_SIZE]\n"
+                                                "\tmov rbx, qword [rbp + 8 ∗ 2]\n" ^
+                                                "\tmov rbx, qword [rbx + 8 ∗ "^(string_of_int depth)^"]\n"^
+                                                "\tmov qword [rbx + 8 ∗ "^(string_of_int pos)^"], rax\n" ^
+                                                "\tmov rax, SOB_VOID_ADDRESS\n"
+    | Var'(VarFree v) -> "\tmov rax, qword [fvar_tbl+"^ (string_of_int(get_fvar_addr v fvars)) ^"*WORD_SIZE]\n"
     | Set'(Var'(VarFree(v)),expr) -> (generate consts fvars expr) ^ 
-                                      "    mov qword [fvar_tbl+"^(string_of_int(get_fvar_addr v fvars))^"*WORD_SIZE], rax\n"^
-                                      "    mov rax, SOB_VOID_ADDRESS\n"
+                                      "\tmov qword [fvar_tbl+"^(string_of_int(get_fvar_addr v fvars))^"*WORD_SIZE], rax\n"^
+                                      "\tmov rax, SOB_VOID_ADDRESS\n"
     | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars) exprs)
     | Or'(exprs) -> let current = !count in
                     count := !count +1;
                     let or_gen consts fvars expr =
                       (generate consts fvars expr) ^ 
-                      "    cmp rax, SOB_FALSE_ADDRESS\n" ^
-                      "    jne LexitOr"^(string_of_int current)^"\n" in
+                      "\tcmp rax, SOB_FALSE_ADDRESS\n" ^
+                      "\tjne LexitOr"^(string_of_int current)^"\n" in
                       String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
-                      "    LexitOr"^(string_of_int current)^":\n"
+                      "\tLexitOr"^(string_of_int current)^":\n"
     | If'(test, dit, dif) -> let current = !count in
                               count := !count +1;
                               (generate consts fvars test) ^ 
-                              "    cmp rax, SOB_FALSE_ADDRESS\n" ^
-                              "    je Lelse"^(string_of_int current)^"\n"^
+                              "\tcmp rax, SOB_FALSE_ADDRESS\n" ^
+                              "\tje Lelse"^(string_of_int current)^"\n"^
                               (generate consts fvars  dit) ^ 
-                              "    jmp LexitIf"^(string_of_int current)^"\n"^
-                              "    Lelse"^(string_of_int current)^":\n"^
+                              "\tjmp LexitIf"^(string_of_int current)^"\n"^
+                              "\tLelse"^(string_of_int current)^":\n"^
                               (generate consts fvars  dif) ^ 
-                              "    LexitIf"^(string_of_int current)^":\n"
-    | BoxGet'(VarParam(_,pos)) -> "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
-                                  "    mov rax, qword [rax]\n"
-    | BoxGet'(VarBound(_,depth,pos)) -> "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                        "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                        "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
-                                        "    mov rax, qword [rax]\n"
+                              "\tLexitIf"^(string_of_int current)^":\n"
+    | BoxGet'(VarParam(_,pos)) -> "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+                                  "\tmov rax, qword [rax]\n"
+    | BoxGet'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                        "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                        "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+                                        "\tmov rax, qword [rax]\n"
     | BoxSet'(VarParam(_,pos),expr) -> (generate consts fvars expr) ^ 
-                                        "    push rax\n" ^
-                                        "    mov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
-                                        "    pop qword [rax]\n" ^
-                                        "    mov rax, SOB_VOID_ADDRESS\n"
+                                        "\tpush rax\n" ^
+                                        "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+                                        "\tpop qword [rax]\n" ^
+                                        "\tmov rax, SOB_VOID_ADDRESS\n"
     | BoxSet'(VarBound(_,depth,pos),expr) -> (generate consts fvars expr) ^ 
-                                             "    push rax\n" ^
-                                             "    mov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                             "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                             "    mov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
-                                             "    pop qword [rax]\n" ^
-                                             "    mov rax, SOB_VOID_ADDRESS\n"
+                                             "\tpush rax\n" ^
+                                             "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
+                                             "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
+                                             "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+                                             "\tpop qword [rax]\n" ^
+                                             "\tmov rax, SOB_VOID_ADDRESS\n"
     | LambdaSimple'(vars, body) -> raise X_not_yet_implemented
     | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
     | Applic'(op, args) -> let args = List.rev args in
