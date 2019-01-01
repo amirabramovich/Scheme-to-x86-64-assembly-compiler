@@ -2,13 +2,14 @@ car:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(0)
-	CAR rax, rsi
+    mov rsi, PVAR(0) ;; rsi got pair
+	CAR rax, rsi ;; rax got car
     jmp .return
 
 .return:
     leave
     ret
+
 
 cdr:
     push rbp
@@ -40,6 +41,7 @@ set_car:
     leave
     ret
 
+
 set_cdr:
     push rbp
     mov rbp, rsp
@@ -58,7 +60,19 @@ set_cdr:
     ret
 
 
-; TODO: cehck cdr, cdr
+cons:
+    push rbp
+    mov rbp, rsp
+
+    mov r8, PVAR(0) ;; car
+    mov r9, PVAR(1) ;; cdr
+    MAKE_PAIR (rax, r8, r9) ;; put pair into rax, r8 is car, r9 is cdr
+
+    jmp .return
+
+.return:
+    leave
+    ret    
 
 is_boolean:
     push rbp

@@ -133,7 +133,7 @@ module Code_Gen : CODE_GEN = struct
      "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
      "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr";
-     (* "cons", "cons" *)
+     "cons", "cons"
      ];;
      (*TODO: check if need to add here car,cdr,map*)
 
