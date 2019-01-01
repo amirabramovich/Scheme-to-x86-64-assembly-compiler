@@ -3,4 +3,18 @@
 ; (or (or (or 1 2 3) (or 4 (or 5 (or 6 7 8) 9) 10) (or 11 (or 12 (or 13 14 15) 16) 17)) (or 18 (or 19 20 21) 22) 23)
 ; (if (if (if 1 2 3) (if 4 (if 5 (or 6 7 8) 9) 10) (or 11 (or 12 (or 13 14 15) 16) 17)) (or 18 (or 19 20 21) 22) 23)
 ; (if (or (if 1 2 3) (if 4 (if 5 (if 6 7 8) 9) 10) (if 11 (or 12 (or 13 14 15) 16) 17)) (if 18 (or 19 20 21) 22) 23)
-(boolean? 99)
+;; (boolean? 99)
+;; 1
+;; (define x '(1 2))
+;; (car '(1 2))
+;;  car, cdr, set-car, set-cdr 
+;;  (cdr '(1 2))
+;; x
+;; (set! x 3)
+;; (set! x '(1 2))
+;; (car x)
+;; (cdr x)
+(define x '(1 2))
+ (set-car! x 0)
+ (set-cdr! x 0)
+ x ;; should print '(0 0)

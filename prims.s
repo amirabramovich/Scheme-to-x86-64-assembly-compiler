@@ -1,3 +1,65 @@
+car:
+    push rbp
+    mov rbp, rsp
+
+    mov rsi, PVAR(0)
+	CAR rax, rsi
+    jmp .return
+
+.return:
+    leave
+    ret
+
+cdr:
+    push rbp
+    mov rbp, rsp
+
+    mov rsi, PVAR(0)
+	CDR rax, rsi
+    jmp .return
+
+.return:
+    leave
+    ret
+    
+
+set_car:
+    push rbp
+    mov rbp, rsp
+
+    mov rsi, PVAR(1) ;; rsi contains new car
+    mov r8, PVAR(0) ;; qword of pair
+    add r8, 1 ;; r8 is car loc
+    mov [r8], rsi
+    mov r9, qword [r8] ;; r9 is car val
+
+    mov rax, SOB_VOID_ADDRESS
+    jmp .return
+
+.return:
+    leave
+    ret
+
+set_cdr:
+    push rbp
+    mov rbp, rsp
+
+    mov rsi, PVAR(1) ;; rsi contains new car
+    mov r8, PVAR(0) ;; qword of pair
+    add r8, 9 ;; r8 is cdr loc
+    mov [r8], rsi
+    mov r9, qword [r8] ;; r9 is car val
+
+    mov rax, SOB_VOID_ADDRESS
+    jmp .return
+
+.return:
+    leave
+    ret
+
+
+; TODO: cehck cdr, cdr
+
 is_boolean:
     push rbp
     mov rbp, rsp

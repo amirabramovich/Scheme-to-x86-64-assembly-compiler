@@ -131,10 +131,13 @@ module Code_Gen : CODE_GEN = struct
      "vector-length", "vector_length"; "vector-ref", "vector_ref"; "vector-set!", "vector_set";
      "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
      "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
-     "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ"
-  (* you can add yours here *)];;(*TODO: check if need to add here car,cdr,map*)
+     "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
+     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr";
+     (* "cons", "cons" *)
+     ];;
+     (*TODO: check if need to add here car,cdr,map*)
 
-  let first (x,y) = x;;
+  let first (x, y) = x;;
 
   let saved_fvars = List.map first primitive_names_to_labels;;
 
@@ -156,7 +159,7 @@ module Code_Gen : CODE_GEN = struct
     | Const' (expr) -> "\tmov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
     | Var'(VarParam(_,pos)) -> "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
     | Def'(Var'(VarFree(name)),expr) -> (generate consts fvars expr) ^
-                                        "\tmov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax\n" ^
+                                        "\tmov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax ;; define case in generate func\n" ^
                                         "\tmov rax, SOB_VOID_ADDRESS\n" 
     | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars expr) ^ 
                                             "\tmov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
@@ -216,7 +219,7 @@ module Code_Gen : CODE_GEN = struct
                             let len = List.length args in
                             let rec applic_rec args =
                             match args with
-                            | car :: cdr -> (generate consts fvars car) ^ "\tpush rax\n" ^ applic_rec cdr
+                            | car :: cdr -> (generate consts fvars car) ^ "\tpush rax ;; applic case in generate func\n" ^ applic_rec cdr
                             | [] -> "\tpush "^(string_of_int len)^"\n"^(generate consts fvars op)^
                             "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n"^"\tpush rbx ; push env\n"^"\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
                             "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
