@@ -201,6 +201,25 @@ let table_test = [(1, t1)];;
 (testSum cyan "Table" table_test);;
 (testFailed table_test);;
 
+
+let s1 = scan_test 
+"(lambda (x y) 
+(lambda () x) 
+(lambda () y)
+(lambda () (set! x y)))" ;;
+
+let t1 = tbl_test
+"(lambda (x y) 
+(lambda () x) 
+(lambda () y)
+(lambda () (set! x y)))" ;;
+
+let f1 = fvars_tbl_test
+"(lambda (x y) 
+(lambda () x) 
+(lambda () y)
+(lambda () (set! x y)))" ;;
+
 let string_to_asts s = List.map Semantics.run_semantics
                          (Tag_Parser.tag_parse_expressions
                             (Reader.read_sexprs s));;
@@ -211,6 +230,7 @@ let a2 = gen_consts_test "1" ;;
 let a3 = gen_consts_test "'a" ;;
 let a4 = gen_consts_test "\"first\" 1" ;;
 let a5 = gen_consts_test "\"firs\" 1" ;;
+
 
 (* All tests *)
 let all_test = scan_ast_test @ duplic_test @ expan_test @ dup2_test @ table_test;;

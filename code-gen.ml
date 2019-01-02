@@ -39,11 +39,14 @@ module Code_Gen : CODE_GEN = struct
     match asts with
       | car :: cdr -> (match car with
                         | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
+                        | Var' (VarFree str) -> scan_ast cdr ([String str] @ consts) (* Add support for Var' *)
+                        | Var' (VarParam (str, pos)) -> scan_ast cdr ([String str] @ consts)
+                        | Var' (VarBound (str, depth, pos)) -> scan_ast cdr ([String str] @ consts)
                         | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
                         | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test]@[dit]@[dif]) consts) 
                         | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
-                        | LambdaSimple' (_, body) -> scan_ast cdr consts @ (scan_ast [body] consts) 
-                        | LambdaOpt' (_, _, body) | BoxSet' (_,body) -> raise X_not_yet_implemented
+                        | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) | BoxSet' (_, body) -> 
+                            scan_ast cdr consts @ (scan_ast [body] consts) (* Add support for LambdaOpt' & BoxSet' *)
                         | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
                         | _ -> scan_ast cdr consts)
       | _ -> consts ;;
