@@ -10,7 +10,6 @@ car:
     leave
     ret
 
-
 cdr:
     push rbp
     mov rbp, rsp
@@ -23,7 +22,6 @@ cdr:
     leave
     ret
     
-
 set_car:
     push rbp
     mov rbp, rsp
@@ -41,7 +39,6 @@ set_car:
     leave
     ret
 
-
 set_cdr:
     push rbp
     mov rbp, rsp
@@ -58,7 +55,6 @@ set_cdr:
 .return:
     leave
     ret
-
 
 cons:
     push rbp
