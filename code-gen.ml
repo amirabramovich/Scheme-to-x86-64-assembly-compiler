@@ -30,11 +30,7 @@ end;;
   *)
 
 let count = (ref 0);;
-<<<<<<< HEAD
 let env_count = (ref 0);;
-=======
-let numberEnvs = (ref 0);; (* Env counter for lambdas, due to Nadav advise *)
->>>>>>> 83558d8d732c08d94f9080ac06fc66d11d0ff229
 
 module Code_Gen : CODE_GEN = struct
 
@@ -233,7 +229,6 @@ module Code_Gen : CODE_GEN = struct
                                              "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
                                              "\tpop qword [rax]\n" ^
                                              "\tmov rax, SOB_VOID_ADDRESS\n"
-<<<<<<< HEAD
     | LambdaSimple'(vars, body) -> let len = List.length vars in
                                     let (curr_count,curr_env) = (!count,!env_count) in
                                     count := !count +1;
@@ -279,43 +274,6 @@ module Code_Gen : CODE_GEN = struct
 
                                     
 
-=======
-    | LambdaSimple'(vars, body) -> raise X_not_yet_implemented
-                      (* here is a try / start of implement ... still need to finish it (or start new), and check ... *)
-                      (* let curr = !numberEnvs in (* curr is "size" of env *)
-                      numberEnvs := !numberEnvs + 1;
-                      let closure = generate consts fvar body in
-                      (* Step 1: allocate extEnv- how to do it .. ? *)
-                      let extEnv = vars @ env @ closure in
-                      let assemEnv = generate consts fvar extEnv in
-                      let assemBody = generate consts fvar body in
-                      let allocEnv var idx = 
-                        let assemVar = generate consts fvar var in
-                        let code = "mov [ebx + 8 * " ^ idx ^ "], " ^ assemVar ^ "\n" in (* extEnv[0][i] = param_i *)
-                      let rec getIdxHelper vars idx lst = 
-                        match vars with
-                          | car :: cdr -> 
-                            getIndexes cdr (idx + 1) (lst @ [idx])
-                          | [] -> lst
-                          | _ -> lst
-                        in
-                        let getIndexes vars = 
-                          getIdxHelper vars 0 []
-                        in
-                      (* still need to extend environment with "prev" environment .. *)
-                      let varsCode = List.map (fun var idx -> allocEnv var idx) (List.combine vars (getIndexes vars)) in
-                      let code = varsCode ^
-                                 "mov r9, " ^ assemBody ^ "\n" ^ (* just a try .. *)
-                                 "mov r10, " ^ assemEnv ^ "\n" ^
-                                 "jmp Lcont
-                                  Lcode: 
-                                    push rbp
-                                    mov rbp, rsp
-                                    MAKE_CLOSURE(rax, r10, r9) ;; [[body]]
-                                    leave
-                                    ret
-                                  Lcont:" in *)
->>>>>>> 83558d8d732c08d94f9080ac06fc66d11d0ff229
     | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
     | Applic'(op, args) | ApplicTP'(op, args) -> let args = List.rev args in
                             let len = List.length args in
