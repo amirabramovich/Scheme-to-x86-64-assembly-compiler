@@ -16,8 +16,25 @@ module type CODE_GEN = sig
   val cons_tbl : sexpr list -> (constant * (int * string)) list
 end;;
 
+(* 
+  update 2.1, 3:05
+    Done:
+      .1. cons, car, cdr, set-car!, set-cdr! (here and assembly code in prims.s)
+      .2. start implement LambdaSimple' here (but not finished : \) 
+      
+    TODO:
+      .1. finish LambdaSimple' & check it
+      .2. continue to other Lambda's & ApplicTP', etc ..
+      .3. Make order in code
+      .4. run tests (e.g, from facebook) 
+  *)
+
 let count = (ref 0);;
+<<<<<<< HEAD
 let env_count = (ref 0);;
+=======
+let numberEnvs = (ref 0);; (* Env counter for lambdas, due to Nadav advise *)
+>>>>>>> 83558d8d732c08d94f9080ac06fc66d11d0ff229
 
 module Code_Gen : CODE_GEN = struct
 
@@ -134,10 +151,13 @@ module Code_Gen : CODE_GEN = struct
      "vector-length", "vector_length"; "vector-ref", "vector_ref"; "vector-set!", "vector_set";
      "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
      "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
-     "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ"
-  (* you can add yours here *)];;(*TODO: check if need to add here car,cdr,map*)
+     "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
+     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr";
+     "cons", "cons"
+     ];;
+     (*TODO: check if need to add here car,cdr,map*)
 
-  let first (x,y) = x;;
+  let first (x, y) = x;;
 
   let saved_fvars = List.map first primitive_names_to_labels;;
 
@@ -159,7 +179,7 @@ module Code_Gen : CODE_GEN = struct
     | Const' (expr) -> "\tmov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
     | Var'(VarParam(_,pos)) -> "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
     | Def'(Var'(VarFree(name)),expr) -> (generate consts fvars expr) ^
-                                        "\tmov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax\n" ^
+                                        "\tmov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax ;; define case in generate func\n" ^
                                         "\tmov rax, SOB_VOID_ADDRESS\n" 
     | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars expr) ^ 
                                             "\tmov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
@@ -181,20 +201,20 @@ module Code_Gen : CODE_GEN = struct
                     count := !count +1;
                     let or_gen consts fvars expr =
                       (generate consts fvars expr) ^ 
-                      "\tcmp rax, SOB_FALSE_ADDRESS\n" ^
-                      "\tjne LexitOr"^(string_of_int current)^"\n" in
+                      "\t" ^ "cmp rax, SOB_FALSE_ADDRESS\n" ^
+                      "\t" ^ "jne LexitOr" ^ (string_of_int current) ^ "\n" in
                       String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
-                      "\tLexitOr"^(string_of_int current)^":\n"
+                      "\t" ^ "LexitOr" ^ (string_of_int current) ^ ":\n"
     | If'(test, dit, dif) -> let current = !count in
-                              count := !count +1;
+                              count := !count + 1;
                               (generate consts fvars test) ^ 
-                              "\tcmp rax, SOB_FALSE_ADDRESS\n" ^
-                              "\tje Lelse"^(string_of_int current)^"\n"^
+                              "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
+                              "\t" ^ "je Lelse" ^ (string_of_int current) ^ "\n" ^
                               (generate consts fvars  dit) ^ 
-                              "\tjmp LexitIf"^(string_of_int current)^"\n"^
-                              "\tLelse"^(string_of_int current)^":\n"^
+                              "\t" ^ "jmp LexitIf" ^ (string_of_int current) ^ "\n" ^
+                              "\t" ^ "Lelse" ^ (string_of_int current) ^ ":\n" ^
                               (generate consts fvars  dif) ^ 
-                              "\tLexitIf"^(string_of_int current)^":\n"
+                              "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
     | BoxGet'(VarParam(_,pos)) -> "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
                                   "\tmov rax, qword [rax]\n"
     | BoxGet'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
@@ -213,6 +233,7 @@ module Code_Gen : CODE_GEN = struct
                                              "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
                                              "\tpop qword [rax]\n" ^
                                              "\tmov rax, SOB_VOID_ADDRESS\n"
+<<<<<<< HEAD
     | LambdaSimple'(vars, body) -> let len = List.length vars in
                                     let (curr_count,curr_env) = (!count,!env_count) in
                                     count := !count +1;
@@ -258,12 +279,49 @@ module Code_Gen : CODE_GEN = struct
 
                                     
 
+=======
+    | LambdaSimple'(vars, body) -> raise X_not_yet_implemented
+                      (* here is a try / start of implement ... still need to finish it (or start new), and check ... *)
+                      (* let curr = !numberEnvs in (* curr is "size" of env *)
+                      numberEnvs := !numberEnvs + 1;
+                      let closure = generate consts fvar body in
+                      (* Step 1: allocate extEnv- how to do it .. ? *)
+                      let extEnv = vars @ env @ closure in
+                      let assemEnv = generate consts fvar extEnv in
+                      let assemBody = generate consts fvar body in
+                      let allocEnv var idx = 
+                        let assemVar = generate consts fvar var in
+                        let code = "mov [ebx + 8 * " ^ idx ^ "], " ^ assemVar ^ "\n" in (* extEnv[0][i] = param_i *)
+                      let rec getIdxHelper vars idx lst = 
+                        match vars with
+                          | car :: cdr -> 
+                            getIndexes cdr (idx + 1) (lst @ [idx])
+                          | [] -> lst
+                          | _ -> lst
+                        in
+                        let getIndexes vars = 
+                          getIdxHelper vars 0 []
+                        in
+                      (* still need to extend environment with "prev" environment .. *)
+                      let varsCode = List.map (fun var idx -> allocEnv var idx) (List.combine vars (getIndexes vars)) in
+                      let code = varsCode ^
+                                 "mov r9, " ^ assemBody ^ "\n" ^ (* just a try .. *)
+                                 "mov r10, " ^ assemEnv ^ "\n" ^
+                                 "jmp Lcont
+                                  Lcode: 
+                                    push rbp
+                                    mov rbp, rsp
+                                    MAKE_CLOSURE(rax, r10, r9) ;; [[body]]
+                                    leave
+                                    ret
+                                  Lcont:" in *)
+>>>>>>> 83558d8d732c08d94f9080ac06fc66d11d0ff229
     | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
     | Applic'(op, args) | ApplicTP'(op, args) -> let args = List.rev args in
                             let len = List.length args in
                             let rec applic_rec args =
                             match args with
-                            | car :: cdr -> (generate consts fvars car) ^ "\tpush rax\n" ^ applic_rec cdr
+                            | car :: cdr -> (generate consts fvars car) ^ "\tpush rax ;; applic case in generate func\n" ^ applic_rec cdr
                             | [] -> "\tpush "^(string_of_int len)^"\n"^(generate consts fvars op)^
                             "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n"^"\tpush rbx ; push env\n"^"\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
                             "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
