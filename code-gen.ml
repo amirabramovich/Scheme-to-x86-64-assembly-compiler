@@ -17,6 +17,7 @@ module type CODE_GEN = sig
 end;;
 
 let count = (ref 0);;
+let env_count = (ref 0);;
 
 module Code_Gen : CODE_GEN = struct
 
@@ -28,7 +29,8 @@ module Code_Gen : CODE_GEN = struct
                         | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
                         | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test]@[dit]@[dif]) consts) 
                         | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
-                        | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) | BoxSet' (_,body) -> raise X_not_yet_implemented
+                        | LambdaSimple' (_, body) -> scan_ast cdr consts @ (scan_ast [body] consts) 
+                        | LambdaOpt' (_, _, body) | BoxSet' (_,body) -> raise X_not_yet_implemented
                         | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
                         | _ -> scan_ast cdr consts)
       | _ -> consts ;;
@@ -118,6 +120,7 @@ module Code_Gen : CODE_GEN = struct
                         | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
                         | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars) (*TODO: check if add more cases*)
                         | Applic' (op, exprs) -> scan_fvars cdr fvars @ (scan_fvars ([op] @ exprs) fvars) 
+                        | LambdaSimple' (_,body) -> scan_fvars cdr fvars @ (scan_fvars [body] fvars)
                         | _ -> scan_fvars cdr fvars)
       | _ -> fvars ;;
 
@@ -210,9 +213,53 @@ module Code_Gen : CODE_GEN = struct
                                              "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
                                              "\tpop qword [rax]\n" ^
                                              "\tmov rax, SOB_VOID_ADDRESS\n"
-    | LambdaSimple'(vars, body) -> raise X_not_yet_implemented
+    | LambdaSimple'(vars, body) -> let len = List.length vars in
+                                    let (curr_count,curr_env) = (!count,!env_count) in
+                                    count := !count +1;
+                                    env_count := !env_count +1;
+                                    "\tlambdaSimple"^(string_of_int curr_count)^":\n"^
+                                    "\tMALLOC r10, 8*(1+"^(string_of_int curr_env)^") ; Allocate ExtEnv\n"^
+                                    "\tmov r11, r10 ; copy of ExtEnv address\n"^
+                                    "\tmov r12, 0 ; i\n"^
+                                    "\tmov r13, "^(string_of_int curr_env)^" ; |env|\n"^
+                                    "\tmov r15, rbp ; copy of rbp\n"^
+                                    "\t.copy_env:\n"^
+                                    "\t\tcmp r12, r13\n"^
+                                    "\t\tje .done_copy_env\n"^
+                                    "\t\tadd r11, 8\n"^
+                                    "\t\tmov r11, qword[r15 + 16] ; ExtEnv[j] = Env[i]\n"^
+                                    "\t\tmov r15, qword[r15] ; jmp to next env\n"^
+                                    "\t\tinc r12\n"^
+                                    "\t\tjmp .copy_env\n"^
+                                    "\t.done_copy_env:\n"^
+                                    "\tmov r12, 0 ; i\n"^
+                                    "\tmov r13, "^(string_of_int len)^" ; "^(string_of_int len)^" arguments\n"^
+                                    "\tmov r15, qword[rbp+32] ; copy of first arg\n"^
+                                    "\tMALLOC r14, 8*"^(string_of_int len)^" ; allocate ExtEnv[0]\n"^
+                                    "\tmov r11, r14 ; copy of ExtEnv[0] \n"^
+                                    "\t.copy_params:\n"^
+                                    "\t\tcmp r12, r13\n"^
+                                    "\t\tje .done_copy_params\n"^
+                                    "\t\tmov r14, r15 ; ExtEnv [0][i] = Param(i)\n"^
+                                    "\t\tadd r14, 8\n"^
+                                    "\t\tadd r15, 8\n"^
+                                    "\t\tinc r12\n"^
+                                    "\t\tjmp .copy_params\n"^
+                                    "\t.done_copy_params:\n"^
+                                    "\tMAKE_CLOSURE(rax, r10, .Lcode)\n"^
+                                    "\tjmp .Lcont\n"^
+                                    "\t.Lcode:\n"^
+                                    "\tpush rbp\n"^
+                                    "\tmov rbp , rsp\n"^
+                                    (generate consts fvars body) ^ 
+                                    "\tleave\n"^
+                                    "\tret\n"^
+                                    "\t.Lcont:\n"
+
+                                    
+
     | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
-    | Applic'(op, args) -> let args = List.rev args in
+    | Applic'(op, args) | ApplicTP'(op, args) -> let args = List.rev args in
                             let len = List.length args in
                             let rec applic_rec args =
                             match args with
@@ -221,7 +268,6 @@ module Code_Gen : CODE_GEN = struct
                             "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n"^"\tpush rbx ; push env\n"^"\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
                             "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
                             "\tshl rbx, 3 ; rbx = rbx * 8\n\tadd rsp, rbx ; pop args\n" in applic_rec args
-    | ApplicTP'(op, args) -> raise X_not_yet_implemented
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;

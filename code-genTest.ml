@@ -55,7 +55,9 @@ let print color txt = (Printf.printf "%s*************************** %s *********
 (* tests for each func *)
 let multi_annotate_lexical_addresses exprs = List.map annotate_lexical_addresses exprs;;
 
-let scan_test x = scan_ast (multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
+let make_ast x = (multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
+
+let scan_test x = scan_ast (make_ast x);;
 
 let dups_test x = remove_dups (scan_test x) ;;
 
