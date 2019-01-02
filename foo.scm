@@ -20,4 +20,5 @@
 ;;  x ;; should print '(0 0)
 ;;(cons 1 2) ;; should print (1 . 2)
 ;; (cons 3 4) ;; should print (3 . 4)
-((lambda(x)4)9)
+;((lambda(x)4)9)
+((lambda(x)(+ x 1))7)

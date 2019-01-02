@@ -17,16 +17,19 @@ module type CODE_GEN = sig
 end;;
 
 (* 
+  update 2.1, 14:20
+      .1. Done lambda simple, ! should to understand where to decrement the env_count counter !
+
   update 2.1, 3:05
     Done:
       .1. cons, car, cdr, set-car!, set-cdr! (here and assembly code in prims.s)
-      .2. start implement LambdaSimple' here (but not finished : \) 
       
     TODO:
       .1. finish LambdaSimple' & check it
-      .2. continue to other Lambda's & ApplicTP', etc ..
-      .3. Make order in code
-      .4. run tests (e.g, from facebook) 
+      .2. continue to other LambdaOPT & ApplicTP'.
+      .3. write apply variadic in assembly
+      .4. check unimplemented functions in scheme (via pdf) and implement them.
+      .5. Make order in code & run tests (e.g, from facebook) 
   *)
 
 let count = (ref 0);;
@@ -173,12 +176,12 @@ module Code_Gen : CODE_GEN = struct
   let rec generate consts fvars e = 
     match e with
     | Const' (expr) -> "\tmov rax, const_tbl+" ^ (string_of_int(get_const_addr expr consts)) ^ "\n"
-    | Var'(VarParam(_,pos)) -> "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"
+    | Var'(VarParam(_,pos)) -> "\tmov rax, PVAR("^ (string_of_int pos) ^")\n"
     | Def'(Var'(VarFree(name)),expr) -> (generate consts fvars expr) ^
                                         "\tmov qword [fvar_tbl+"^(string_of_int(get_fvar_addr name fvars))^"*WORD_SIZE], rax ;; define case in generate func\n" ^
                                         "\tmov rax, SOB_VOID_ADDRESS\n" 
     | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars expr) ^ 
-                                            "\tmov qword [rbp + 8 ∗ (4 + "^(string_of_int pos)^")], rax\n"^
+                                            "\tmov qword PVAR("^(string_of_int pos)^"), rax\n"^
                                             "\tmov rax, SOB_VOID_ADDRESS\n"
     | Var'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
                                       "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
