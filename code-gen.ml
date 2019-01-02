@@ -17,19 +17,16 @@ module type CODE_GEN = sig
 end;;
 
 (* 
-  update 2.1, 14:20
-      .1. Done lambda simple, ! should to understand where to decrement the env_count counter !
+  update 2.1, 20:20
+      .1. Done lambda simple.
+      .2. moved our assembly funcs to epilog here. (should be in epilog) 
 
-  update 2.1, 3:05
-    Done:
-      .1. cons, car, cdr, set-car!, set-cdr! (here and assembly code in prims.s)
-      
     TODO:
-      .1. finish LambdaSimple' & check it
-      .2. continue to other LambdaOPT & ApplicTP'.
-      .3. write apply variadic in assembly
-      .4. check unimplemented functions in scheme (via pdf) and implement them.
-      .5. Make order in code & run tests (e.g, from facebook) 
+      .0. complete ast scan which finds constants and freeVars in ast (code-gen scan funcs)
+      .1. finish LambdaOPT & ApplicTP'.
+      .2. write apply variadic in assembly
+      .3. check unimplemented functions in stdlib.scm (via pdf) and implement them.
+      .4. Make order in code & run tests (e.g, from facebook) 
   *)
 
 let count = (ref 0);;
@@ -183,13 +180,13 @@ module Code_Gen : CODE_GEN = struct
     | Set'(Var'(VarParam(_, pos)),expr) -> (generate consts fvars expr) ^ 
                                             "\tmov qword PVAR("^(string_of_int pos)^"), rax\n"^
                                             "\tmov rax, SOB_VOID_ADDRESS\n"
-    | Var'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                      "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                      "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" 
+    | Var'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 16]\n" ^
+                                      "\tmov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+                                      "\tmov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" 
     | Set'(Var'(VarBound(_,depth,pos)),expr) -> (generate consts fvars expr) ^
-                                                "\tmov rbx, qword [rbp + 8 ∗ 2]\n" ^
-                                                "\tmov rbx, qword [rbx + 8 ∗ "^(string_of_int depth)^"]\n"^
-                                                "\tmov qword [rbx + 8 ∗ "^(string_of_int pos)^"], rax\n" ^
+                                                "\tmov rbx, qword [rbp + 16]\n" ^
+                                                "\tmov rbx, BVARX("^(string_of_int depth)^")\n"^
+                                                "\tmov BVARX("^(string_of_int pos)^"), rax\n" ^
                                                 "\tmov rax, SOB_VOID_ADDRESS\n"
     | Var'(VarFree v) -> "\tmov rax, qword [fvar_tbl+"^ (string_of_int(get_fvar_addr v fvars)) ^"*WORD_SIZE]\n"
     | Set'(Var'(VarFree(v)),expr) -> (generate consts fvars expr) ^ 
@@ -214,22 +211,22 @@ module Code_Gen : CODE_GEN = struct
                               "\t" ^ "Lelse" ^ (string_of_int current) ^ ":\n" ^
                               (generate consts fvars  dif) ^ 
                               "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
-    | BoxGet'(VarParam(_,pos)) -> "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+    | BoxGet'(VarParam(_,pos)) -> "\tmov rax, PVAR("^ (string_of_int pos) ^")\n"^
                                   "\tmov rax, qword [rax]\n"
-    | BoxGet'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                        "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                        "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+    | BoxGet'(VarBound(_,depth,pos)) -> "\tmov rax, qword [rbp + 16]\n" ^
+                                        "\tmov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+                                        "\tmov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
                                         "\tmov rax, qword [rax]\n"
     | BoxSet'(VarParam(_,pos),expr) -> (generate consts fvars expr) ^ 
                                         "\tpush rax\n" ^
-                                        "\tmov rax, qword [rbp + 8 ∗ (4 + "^ (string_of_int pos) ^")]\n"^
+                                        "\tmov rax, PVAR("^ (string_of_int pos) ^")\n"^
                                         "\tpop qword [rax]\n" ^
                                         "\tmov rax, SOB_VOID_ADDRESS\n"
     | BoxSet'(VarBound(_,depth,pos),expr) -> (generate consts fvars expr) ^ 
                                              "\tpush rax\n" ^
-                                             "\tmov rax, qword [rbp + 8 ∗ 2]\n" ^
-                                             "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int depth) ^ "]\n" ^
-                                             "\tmov rax, qword [rax + 8 ∗ " ^ (string_of_int pos) ^ "]\n" ^
+                                             "\tmov rax, qword [rbp +16]\n" ^
+                                             "\tmov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+                                             "\tmov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
                                              "\tpop qword [rax]\n" ^
                                              "\tmov rax, SOB_VOID_ADDRESS\n"
     | LambdaSimple'(vars, body) -> let len = List.length vars in
@@ -246,34 +243,38 @@ module Code_Gen : CODE_GEN = struct
                                     "\t\tcmp r12, r13\n"^
                                     "\t\tje .done_copy_env\n"^
                                     "\t\tadd r11, 8\n"^
-                                    "\t\tmov r11, qword[r15 + 16] ; ExtEnv[j] = Env[i]\n"^
+                                    "\t\tmov r14, qword[r15 + 16] ; r14 = Env[i]\n"^
+                                    "\t\tmov [r11], r14 ; ExtEnv[j] = r14\n"^
                                     "\t\tmov r15, qword[r15] ; jmp to next env\n"^
                                     "\t\tinc r12\n"^
                                     "\t\tjmp .copy_env\n"^
                                     "\t.done_copy_env:\n"^
                                     "\tmov r12, 0 ; i\n"^
                                     "\tmov r13, "^(string_of_int len)^" ; "^(string_of_int len)^" arguments\n"^
-                                    "\tmov r15, qword[rbp+32] ; copy of first arg\n"^
+                                    "\tmov r15, rbp ; r15=rbp\n"^
+                                    "\tadd r15, 32 ; r15=address of first arg\n"^
                                     "\tMALLOC r14, 8*"^(string_of_int len)^" ; allocate ExtEnv[0]\n"^
                                     "\tmov r11, r14 ; copy of ExtEnv[0] \n"^
                                     "\t.copy_params:\n"^
                                     "\t\tcmp r12, r13\n"^
                                     "\t\tje .done_copy_params\n"^
-                                    "\t\tmov r14, r15 ; ExtEnv [0][i] = Param(i)\n"^
+                                    "\t\tmov r9, [r15] ; r9 = Param(i)\n"^
+                                    "\t\tmov [r14], r9 ; ExtEnv [0][i] = r9\n"^
                                     "\t\tadd r14, 8\n"^
                                     "\t\tadd r15, 8\n"^
                                     "\t\tinc r12\n"^
                                     "\t\tjmp .copy_params\n"^
                                     "\t.done_copy_params:\n"^
-                                    "\tMAKE_CLOSURE(rax, r10, .Lcode)\n"^
-                                    "\tjmp .Lcont\n"^
-                                    "\t.Lcode:\n"^
+                                    "\tmov [r10], r11\n"^
+                                    "\tMAKE_CLOSURE(rax, r10, Lcode"^(string_of_int curr_count)^")\n"^
+                                    "\tjmp Lcont"^(string_of_int curr_count)^"\n"^
+                                    "\tLcode"^(string_of_int curr_count)^":\n"^
                                     "\tpush rbp\n"^
                                     "\tmov rbp , rsp\n"^
                                     (generate consts fvars body) ^ 
                                     "\tleave\n"^
                                     "\tret\n"^
-                                    "\t.Lcont:\n"
+                                    "\tLcont"^(string_of_int curr_count)^":\n"
 
                                     
 

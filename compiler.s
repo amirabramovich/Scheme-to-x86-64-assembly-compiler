@@ -65,6 +65,10 @@
 %define CLOSURE_CODE CDR
 
 %define PVAR(n) qword [rbp+(4+n)*WORD_SIZE]
+
+%define BVAR(n) qword [rax+WORD_SIZE*n]
+
+%define BVARX(n) qword [rbx+WORD_SIZE*n]
 	
 %define SOB_UNDEFINED T_UNDEFINED
 %define SOB_NIL T_NIL
