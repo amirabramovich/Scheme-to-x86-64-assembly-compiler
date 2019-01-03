@@ -26,3 +26,10 @@
  (plus3 9)
  ((adder 3)9)
  ((adder ((goo 9)))10)
+;;  (lambda (a b . c)
+;;       (lambda ()
+;;         (set! c (+ c a))
+;;         c
+;;       )
+;;       (lambda () (set! b (lambda () (set! a 5))))
+;;     ) ;; lambdaOpt'

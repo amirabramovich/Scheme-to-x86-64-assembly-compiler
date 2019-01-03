@@ -13,8 +13,8 @@ let string_to_asts s = List.map Semantics.run_semantics
 let primitive_names_to_labels = Code_Gen.primitive_names_to_labels;; 
 
 let make_prologue consts_tbl fvars_tbl =
-  let get_const_address const = "const_tbl+"^string_of_int(Code_Gen.get_const_addr const consts_tbl) in
-  let get_fvar_address const = "fvar_tbl+"^string_of_int(Code_Gen.get_fvar_addr const fvars_tbl)^"*WORD_SIZE" in
+  let get_const_address const = "const_tbl+" ^ string_of_int(Code_Gen.get_const_addr const consts_tbl) in
+  let get_fvar_address const = "fvar_tbl+" ^ string_of_int(Code_Gen.get_fvar_addr const fvars_tbl) ^ "*WORD_SIZE" in
   let make_primitive_closure (prim, label) =
 "    MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, " ^ label  ^ ")
     mov [" ^ (get_fvar_address prim)  ^ "], rax" in
@@ -41,7 +41,7 @@ const_tbl:
 %define SOB_TRUE_ADDRESS " ^ get_const_address (Sexpr (Bool true)) ^ "
 
 fvar_tbl:
-" ^ (String.concat "\n" (List.map (fun (str,index) -> "dq T_UNDEFINED ; i'm "^str^", my address is "^string_of_int index) fvars_tbl)) ^ "
+" ^ (String.concat "\n" (List.map (fun (str,index) -> "dq T_UNDEFINED ; i'm " ^ str ^ ", my address is " ^ string_of_int index) fvars_tbl)) ^ "
 
 global main
 section .text
@@ -74,7 +74,8 @@ code_fragment:
 " ^ (String.concat "\n" (List.map make_primitive_closure primitive_names_to_labels)) ^ "
     \nuser_code:
 ";;
-(* TODO: add here implementation of apply in assembly*)
+
+(* TODO: add here implementation of apply in assembly *)
 let epilogue = " 
 car:
     push rbp
@@ -153,7 +154,7 @@ exception X_missing_input_file;;
 
 try
   let infile = Sys.argv.(1) in
-  let code =  (*TODO: remove the comment below when all cases in generator in code-gen are done*)
+  let code =  (* TODO: remove the comment below when all cases in generator in code-gen are done *)
     (* (file_to_string "stdlib.scm") ^  *)
   (file_to_string infile) in
   let asts = string_to_asts code in
