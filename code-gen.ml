@@ -351,7 +351,8 @@ module Code_Gen : CODE_GEN = struct
                             "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env\n"^
                             "\t" ^ "push rbx ; push env\n" ^
                             "\t" ^ "mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
-                            "\t" ^ "call rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
+                            "\t" ^ "call rbx ; call code\n\tadd rsp, 8*1 ; pop env\n" ^ 
+                            "\t" ^ "pop rbx ; pop arg count\n"^
                             "\t" ^ "inc rbx\n" ^
                             "\t" ^ "shl rbx, 3 ; rbx = rbx * 8\n" ^
                             "\t" ^ "add rsp, rbx ; pop args\n" in 
@@ -362,17 +363,20 @@ module Code_Gen : CODE_GEN = struct
                               let len = List.length args in
                               let rec applic_rec args =
                               match args with
-                              | car :: cdr -> (generate consts fvars car) ^ "\tpush rax ;; applic case in generate func\n" ^ applic_rec cdr
-                              | [] -> "\tpush " ^ (string_of_int len) ^ "\n" ^ (generate consts fvars op) ^
-                              "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^ "\tpush rbx ; push env\n" ^
-                              "\t" ^ "push qword [rbp + 9] ; old ret addr\n" ^
-                              "\t" ^ "mov r9, qword[rbp]\n" ^
-                              "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "," ^ (string_of_int len) ^ "\n" ^ (* for override the stack *)
-                              "\t" ^ "mov rbp, r9\n" ^
-                              "\t" ^ "jmp [rax+9]\n" in 
-                              "\t" ^ "mov rax, 9999\n" ^
-                              "\t" ^ "push rax\n" ^
-                              (applic_rec args)
+                              | car :: cdr -> (generate consts fvars car) ^ "\t" ^ "push rax ;; applic case in generate func\n" ^ applic_rec cdr
+                              | [] -> 
+                                  "\t" ^ "push " ^ (string_of_int len) ^ "\n" ^
+                                  (generate consts fvars op) ^
+                                  "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^
+                                  "\t" ^ "push rbx ; push env\n" ^
+                                  "\t" ^ "push qword [rbp + 8] ; old ret addr\n" ^
+                                  "\t" ^ "mov r9, qword[rbp]\n" ^
+                                  "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ ", " ^ (string_of_int len) ^ "\n" ^ (* for override the stack *)
+                                  "\t" ^ "mov rbp, r9\n" ^
+                                  "\t" ^ "jmp [rax+9]\n" in 
+                                  "\t" ^ "mov rax, 9999\n" ^
+                                  "\t" ^ "push rax\n" ^
+                                  (applic_rec args)
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;

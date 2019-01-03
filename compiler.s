@@ -34,11 +34,11 @@
 
 %define INT_VAL SKIP_TYPE_TAG
 
-; TODO: this is old! new is commented.
-%define CHAR_VAL SKIP_TYPE_TAG 
-; %macro CHAR_VAL 2
-; 	mov %1, byte [%2+TYPE_SIZE]
-; %endmacro
+
+%macro CHAR_VAL 2
+	movzx %1, byte [%2+TYPE_SIZE]
+%endmacro
+
 
 %define FLOAT_VAL SKIP_TYPE_TAG
 
@@ -110,8 +110,8 @@ dq %1
 
 %macro SHIFT_FRAME 2 ; %1 = size of frame (constant) ; %2 = param count
 	push rax
-	mov rax, %2
-	add rax, 5
+	mov rax, %2 ;; param count
+	add rax, 5 ;; %1 = length arglist + 5
 %assign i 1
 %rep %1
 	dec rax
