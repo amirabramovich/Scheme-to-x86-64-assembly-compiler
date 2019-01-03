@@ -67,7 +67,7 @@ let dups2_test x = remove_dups (expand_test x) ;;
 
 let tbl_test x = cons_tbl (dups2_test x) ;;
 
-let fvars_tbl_test x = make_fvars_tbl(multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
+let fvars_tbl_test x = make_fvars_tbl (multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
 
 (* Compare sexprs *)
 (* Note: if 2 lists diff' length => List.combine raise exception Invalid_argument *)
@@ -201,6 +201,63 @@ let table_test = [(1, t1)];;
 (testSum cyan "Table" table_test);;
 (testFailed table_test);;
 
+(* Seq', Or' *)
+let f1 = fvars_tbl_test
+"(begin
+  (lambda (x)
+    (or (lambda () (set! x (+ x 0)))
+        (set! a (+ x 1))
+    )
+  )
+  (lambda (x)
+    (lambda ()
+      (or (set! x (+ x 2))
+          (set! x (+ x 3))
+          (fvar! 3)  
+      )
+    )
+  )
+)";;
+
+(* LOpt' *)
+let f2 = fvars_tbl_test
+"(lambda (a b . c)
+(lambda ()
+  (set! c (+ c a))
+  fvar!
+)
+(lambda () (set! b 
+  (lambda () (set! a 5))
+  ))
+)";;
+
+(* ApplicTP' *)
+let f3 = fvars_tbl_test
+"(lambda (x) (f (g (g x))))";;
+
+(* If', Applic' *)
+let f4 = fvars_tbl_test
+"(lambda (x y z w)(if (foo? x)(goo y)(boo (doo z))))"
+
+
+let s1 = scan_test 
+"(lambda (x y) 
+(lambda () x) 
+(lambda () y)
+(lambda () (set! x y)))" ;;
+
+let t1 = tbl_test
+"(lambda (x y) 
+(lambda () x) 
+(lambda () y)
+(lambda () (set! x y)))" ;;
+
+let f1 = fvars_tbl_test
+"(lambda (x y) 
+(lambda () x) 
+(lambda () y)
+(lambda () (set! x y)))" ;;
+
 let string_to_asts s = List.map Semantics.run_semantics
                          (Tag_Parser.tag_parse_expressions
                             (Reader.read_sexprs s));;
@@ -211,6 +268,7 @@ let a2 = gen_consts_test "1" ;;
 let a3 = gen_consts_test "'a" ;;
 let a4 = gen_consts_test "\"first\" 1" ;;
 let a5 = gen_consts_test "\"firs\" 1" ;;
+
 
 (* All tests *)
 let all_test = scan_ast_test @ duplic_test @ expan_test @ dup2_test @ table_test;;

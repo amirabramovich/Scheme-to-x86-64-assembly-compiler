@@ -34,7 +34,7 @@
 
 %define INT_VAL SKIP_TYPE_TAG
 
-;TODO:this is old! new is commented.
+; TODO: this is old! new is commented.
 %define CHAR_VAL SKIP_TYPE_TAG 
 ; %macro CHAR_VAL 2
 ; 	mov %1, byte [%2+TYPE_SIZE]
@@ -118,7 +118,8 @@ dq %1
 %endrep
 	pop rax
 	mov r8, %2
-	add r8, 40
+	add r8, 5
+	shl r8, 3
 	add rsp, r8
 %endmacro
 
