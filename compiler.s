@@ -108,6 +108,24 @@ db T_SYMBOL
 dq %1
 %endmacro
 
+%macro SHIFT_FRAME 2 ; %1 = size of frame (constant) ; %2 = param count
+	push rax
+	mov rax, %2
+	add rax, 5
+%assign i 1
+%rep %1
+	dec rax
+	mov r8, [rbp-WORD_SIZE*i]
+	mov [rbp+WORD_SIZE*rax], r8
+%assign i i+1
+%endrep
+	pop rax
+	mov r8, %2
+	add r8, 5
+	shl r8, 3
+	add rsp, r8
+%endmacro
+
 ; Creates a short SOB with the
 ; value %2
 ; Returns the result in register %1

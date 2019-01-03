@@ -154,7 +154,6 @@ module Code_Gen : CODE_GEN = struct
       | car :: cdr -> (match car with
                         | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
                         | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars) (* TODO: check if add more cases *)
-                        | Applic' (op, exprs) -> scan_fvars cdr fvars @ (scan_fvars ([op] @ exprs) fvars) 
                         | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> 
                             scan_fvars cdr fvars @ (scan_fvars [body] fvars) (* Add LOpt' *)
                         | Or' exprs | Seq' exprs -> 
@@ -181,7 +180,8 @@ module Code_Gen : CODE_GEN = struct
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
      "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons"
      ];;
-     (* TODO: implement apply (variadic), string->vector, vector->string *)
+     (* TODO: implement append (variadic), apply (variadic), equal?, length, list (variadic), 
+     map (variadic), not, number?, zero? *)
 
   let first (x, y) = x;;
 
@@ -336,37 +336,43 @@ module Code_Gen : CODE_GEN = struct
         count := !count + 1;
         env_count := !env_count + 1;
         assemLambda vars body ^ (lcodeOpt body curr_count) *)
-    | Applic'(op, args) | ApplicTP'(op, args) -> 
-              let args = List.rev args in (* TODO: implement separated ApplicTP' later *)
-              let len = List.length args in
-              (* Helper function to generate Applic' *)
-              let rec applic_rec args =
-                match args with
-                | car :: cdr -> 
-                    (generate consts fvars car) ^ "\t" ^ "; [[argn]]\n" ^ 
-                    "\t" ^ "push rax ;; applic case in generate func\n" ^ 
-                    applic_rec cdr (* rest of args *)
-                | [] -> 
-                    "\t" ^ "push " ^ (string_of_int len) ^ "; push n\n" ^ 
-                    (generate consts fvars op) ^ "\t" ^ "; [[proc]]\n" ^ 
-                    "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env (verify that rax has type closure) \n" ^
-                    "\t" ^ "push rbx ; push env\n" ^
-                    "\t" ^ "mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n" ^
-                    "\t" ^ "call rbx ; call code\n" ^ 
-                    (* "\t" ^ "pop rax ; [try] pop magic ?\n" ^ *)
-                    "\t" ^ "add rsp, 8*1 ; pop env\n" ^ 
-                    "\t" ^ "pop rbx ; pop arg count\n" ^
-                    "\t" ^ "shl rbx, 3 ; rbx = rbx * 8\n" ^ 
-                    "\t" ^ "add rsp, rbx ; pop args\n" in
-                  
-                  (* "\t" ^ "mov rax, SOB_MAGIC ; [try] magic ? \n" ^
-                  "\t" ^ "push rax ; [try] push magic ? \n" ^ *)
-                  applic_rec args
-                  (* Annother approach for LOpt': magic
-                      .1. push magic when call to function
-                      .2. pop magic after the call 
-                      .3. do not count magic with the number of params 
-                      .4. *)
+    | Applic'(op, args) -> let args = List.rev args in
+                            let len = List.length args in
+                            let rec applic_rec args =
+                            match args with
+                            | car :: cdr -> 
+                            (generate consts fvars car) ^
+                            "\t" ^ "push rax ;; applic case in generate func\n" ^ 
+                            applic_rec cdr
+                            | [] -> 
+                            "\t" ^ "push "^
+                            (string_of_int len) ^ "\n" ^
+                            (generate consts fvars op) ^
+                            "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env\n"^
+                            "\t" ^ "push rbx ; push env\n" ^
+                            "\t" ^ "mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
+                            "\t" ^ "call rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
+                            "\t" ^ "inc rbx\n" ^
+                            "\t" ^ "shl rbx, 3 ; rbx = rbx * 8\n" ^
+                            "\t" ^ "add rsp, rbx ; pop args\n" in 
+                            "\t" ^ "mov rax, 6666\n" ^
+                            "\t" ^ "push rax\n" ^
+                            (applic_rec args)
+    | ApplicTP'(op, args) -> let args = List.rev args in
+                              let len = List.length args in
+                              let rec applic_rec args =
+                              match args with
+                              | car :: cdr -> (generate consts fvars car) ^ "\tpush rax ;; applic case in generate func\n" ^ applic_rec cdr
+                              | [] -> "\tpush " ^ (string_of_int len) ^ "\n" ^ (generate consts fvars op) ^
+                              "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^ "\tpush rbx ; push env\n" ^
+                              "\t" ^ "push qword [rbp + 9] ; old ret addr\n" ^
+                              "\t" ^ "mov r9, qword[rbp]\n" ^
+                              "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "," ^ (string_of_int len) ^ "\n" ^ (* for override the stack *)
+                              "\t" ^ "mov rbp, r9\n" ^
+                              "\t" ^ "jmp [rax+9]\n" in 
+                              "\t" ^ "mov rax, 9999\n" ^
+                              "\t" ^ "push rax\n" ^
+                              (applic_rec args)
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;
