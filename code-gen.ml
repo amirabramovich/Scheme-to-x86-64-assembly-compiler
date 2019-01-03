@@ -155,7 +155,16 @@ module Code_Gen : CODE_GEN = struct
                         | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
                         | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars) (* TODO: check if add more cases *)
                         | Applic' (op, exprs) -> scan_fvars cdr fvars @ (scan_fvars ([op] @ exprs) fvars) 
-                        | LambdaSimple' (_, body) -> scan_fvars cdr fvars @ (scan_fvars [body] fvars)
+                        | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> 
+                            scan_fvars cdr fvars @ (scan_fvars [body] fvars) (* Add LOpt' *)
+                        | Or' exprs | Seq' exprs -> 
+                            scan_fvars cdr fvars @ List.concat ((List.map (fun expr -> scan_fvars [expr] fvars)) exprs) (* Add Seq' & Or' *)
+                        | If' (test, dit, dif) -> 
+                            scan_fvars cdr fvars @ scan_fvars [test; dit; dif] fvars (* Add If' *)
+                        | Set'(_ , expr) -> scan_fvars cdr fvars @ scan_fvars [expr] fvars
+                        (* Add Applic' & ApplicTP' *)
+                        | Applic' (op, exprs) | ApplicTP' (op, exprs) -> 
+                            scan_fvars cdr fvars @ List.concat (List.map (fun expr -> scan_fvars [expr] fvars) ([op] @ exprs))
                         | _ -> scan_fvars cdr fvars)
       | _ -> fvars ;;
 
@@ -172,7 +181,8 @@ module Code_Gen : CODE_GEN = struct
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
      "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons"
      ];;
-     (* TODO: check if need to add here map *)
+     (* TODO: implement append (variadic), apply (variadic), equal?, length, list (variadic), map (variadic), not,
+                        number?, string->vector, vector, vector->string, zero? *)
 
   let first (x, y) = x;;
 
@@ -186,7 +196,7 @@ module Code_Gen : CODE_GEN = struct
   let cons_fvars fvars = cons_fvars (remove_dups (saved_fvars @ fvars)) [] 0;;
 
   (* expr' list -> (string * int) list *)
-  let make_fvars_tbl asts = cons_fvars(scan_fvars asts);;
+  let make_fvars_tbl asts = cons_fvars (scan_fvars asts);;
 
   let get_fvar_addr fvar tbl = List.assoc fvar tbl;;
 

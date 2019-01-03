@@ -67,7 +67,7 @@ let dups2_test x = remove_dups (expand_test x) ;;
 
 let tbl_test x = cons_tbl (dups2_test x) ;;
 
-let fvars_tbl_test x = make_fvars_tbl(multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
+let fvars_tbl_test x = make_fvars_tbl (multi_annotate_lexical_addresses (tag_parse_expressions (read_sexprs x)));;
 
 (* Compare sexprs *)
 (* Note: if 2 lists diff' length => List.combine raise exception Invalid_argument *)
@@ -200,6 +200,44 @@ let d14 = dups2_test "#(1 #t \"str\")";;
 let table_test = [(1, t1)];;
 (testSum cyan "Table" table_test);;
 (testFailed table_test);;
+
+(* Seq', Or' *)
+let f1 = fvars_tbl_test
+"(begin
+  (lambda (x)
+    (or (lambda () (set! x (+ x 0)))
+        (set! a (+ x 1))
+    )
+  )
+  (lambda (x)
+    (lambda ()
+      (or (set! x (+ x 2))
+          (set! x (+ x 3))
+          (fvar! 3)  
+      )
+    )
+  )
+)";;
+
+(* LOpt' *)
+let f2 = fvars_tbl_test
+"(lambda (a b . c)
+(lambda ()
+  (set! c (+ c a))
+  fvar!
+)
+(lambda () (set! b 
+  (lambda () (set! a 5))
+  ))
+)";;
+
+(* ApplicTP' *)
+let f3 = fvars_tbl_test
+"(lambda (x) (f (g (g x))))";;
+
+(* If', Applic' *)
+let f4 = fvars_tbl_test
+"(lambda (x y z w)(if (foo? x)(goo y)(boo (doo z))))"
 
 
 let s1 = scan_test 
