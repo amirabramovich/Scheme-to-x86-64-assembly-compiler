@@ -1096,4 +1096,6 @@ allPassed cyan all_test;;
  
  
 print grn "END TESTS";;
+
+let c1 = run_semantics (tag_parse_expression (read_sexpr "((lambda (x) (g (g x))) 1)"));;
  

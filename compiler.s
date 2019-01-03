@@ -34,11 +34,11 @@
 
 %define INT_VAL SKIP_TYPE_TAG
 
-; TODO: this is old! new is commented.
-%define CHAR_VAL SKIP_TYPE_TAG 
-; %macro CHAR_VAL 2
-; 	mov %1, byte [%2+TYPE_SIZE]
-; %endmacro
+
+%macro CHAR_VAL 2
+	movzx %1, byte [%2+TYPE_SIZE]
+%endmacro
+
 
 %define FLOAT_VAL SKIP_TYPE_TAG
 
@@ -75,6 +75,9 @@
 %define SOB_VOID T_VOID
 %define SOB_FALSE word T_BOOL
 %define SOB_TRUE word (1 << TYPE_SIZE | T_BOOL)
+
+; Define for Magic
+%define SOB_MAGIC T_NIL
 
 ; returns %2 allocated bytes in register %1
 ; Supports using with %1 = %2

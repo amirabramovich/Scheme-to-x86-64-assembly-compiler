@@ -1,3 +1,9 @@
+;; TODO: NOT implement apply (variadic), string->vector, vector->string
+;; NEED TO DO THAT IN ASSEMBLY. NOT IN SCHEME!
+;; (define apply) - IN ASSEMBLY
+;; (define string->vector) - NO NEED ! READ NOTICE BOARD!
+;; (define vector->string) - NO NEED ! READ NOTICE BOARD!
+
 (define append
     (let ((null? null?) (car car) (cdr cdr) (cons cons))
       (lambda args

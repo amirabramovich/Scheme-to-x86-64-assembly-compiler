@@ -341,6 +341,7 @@ symbol_to_string:
     mov byte [r9], bl
     
     dec rcx
+    ; jmp .loop ;; due to Yitav comment on facebook
 .end:
 
     leave
