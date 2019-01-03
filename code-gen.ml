@@ -346,26 +346,37 @@ module Code_Gen : CODE_GEN = struct
                             "\tpush rbx ; push env\n"^
                             "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
                             "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
-                            "\tinc rbx\n"^
+                            (* "\tinc rbx\n"^ *)
                             "\tshl rbx, 3 ; rbx = rbx * 8\n"^
                             "\tadd rsp, rbx ; pop args\n" in 
-                            "\tmov rax, 6666\n"^
-                            "\tpush rax\n"^
+                            (* "\tmov rax, 6666\n"^
+                            "\tpush rax\n"^ *)
                             (applic_rec args)
     | ApplicTP'(op, args) -> let args = List.rev args in
                               let len = List.length args in
                               let rec applic_rec args =
                               match args with
-                              | car :: cdr -> (generate consts fvars car) ^ "\tpush rax ;; applic case in generate func\n" ^ applic_rec cdr
-                              | [] -> "\tpush "^(string_of_int len)^"\n"^(generate consts fvars op)^
-                              "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n"^"\tpush rbx ; push env\n"^
-                              "\tpush qword [rbp + 9] ; old ret addr\n"^
-                              "\tmov r9, qword[rbp]\n"^
-                              "\tSHIFT_FRAME "^(string_of_int (len+5))^","^(string_of_int len)^"\n"^
-                              "\tmov rbp, r9\n"^
-                              "\tjmp [rax+9]\n" in 
-                              "\tmov rax, 9999\n"^
-                              "\tpush rax\n"^
+                              | car :: cdr -> 
+                              (generate consts fvars car) ^ 
+                              "\tpush rax ;; applic case in generate func\n" ^ 
+                              applic_rec cdr
+                              | [] -> 
+                              "\tpush "^(string_of_int len)^"\n"^
+                              (generate consts fvars op)^
+                              "\tmov r9, [rax+TYPE_SIZE] ; closure's env\n"^
+                              "\tpush r9 ; push env\n"^
+                              "\tpush qword [rbp + 8] ; old ret addr\n"^
+                              "\tSHIFT_FRAME "^(string_of_int (len+4))^"\n"^
+                              "\tmov r9, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
+                              "\tjmp r9\n"
+                              (* "\tadd rsp, 8*1 ; pop env\n"^
+                              "\tpop rbx ; pop arg count\n"^ *)
+                              (* "\tinc rbx\n"^ *)
+                              (* "\tshl rbx, 3 ; rbx = rbx * 8\n"^
+                              "\tadd rsp, rbx ; pop args\n"  *)
+                              in 
+                              (* "\tmov rax, 9999\n"^
+                              "\tpush rax\n"^ *)
                               (applic_rec args)
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 

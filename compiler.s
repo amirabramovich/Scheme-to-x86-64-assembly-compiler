@@ -105,10 +105,15 @@ db T_SYMBOL
 dq %1
 %endmacro
 
-%macro SHIFT_FRAME 2 ; %1 = size of frame (constant) ; %2 = param count
+%define PARAM_COUNT qword [rbp+3*WORD_SIZE]
+
+%macro SHIFT_FRAME 1 ; %1 = size of frame (constant) ; 
+	push r8
 	push rax
-	mov rax, %2
-	add rax, 5
+	push rdx
+	mov rax, PARAM_COUNT
+	add rax, 4
+	mov rdx, qword[rbp]
 %assign i 1
 %rep %1
 	dec rax
@@ -116,11 +121,13 @@ dq %1
 	mov [rbp+WORD_SIZE*rax], r8
 %assign i i+1
 %endrep
+	mov rbp, rdx
+	pop rdx
 	pop rax
-	mov r8, %2
-	add r8, 5
+	mov r8, rax
 	shl r8, 3
 	add rsp, r8
+	pop r8
 %endmacro
 
 ; Creates a short SOB with the
