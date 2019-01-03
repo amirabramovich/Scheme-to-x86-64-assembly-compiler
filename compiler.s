@@ -76,6 +76,9 @@
 %define SOB_FALSE word T_BOOL
 %define SOB_TRUE word (1 << TYPE_SIZE | T_BOOL)
 
+; Define for Magic
+%define SOB_MAGIC T_NIL
+
 ; returns %2 allocated bytes in register %1
 ; Supports using with %1 = %2
 %macro MALLOC 2

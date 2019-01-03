@@ -1,3 +1,9 @@
+;; TODO: implement apply (variadic), string->vector, vector->string
+
+;; (define apply)
+;; (define string->vector)
+;; (define vector->string)
+
 (define append
     (let ((null? null?) (car car) (cdr cdr) (cons cons))
       (lambda args
