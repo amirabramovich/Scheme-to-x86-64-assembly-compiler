@@ -49,7 +49,7 @@ main:
     push rbp 
     mov rbp, rsp
     ;; set up the heap
-    mov rdi, GB(4) ;; TODO: changed from GB(4)
+    mov rdi, MB(400) ;; TODO: changed from GB(4)
     call malloc
     mov [malloc_pointer], rax
 
