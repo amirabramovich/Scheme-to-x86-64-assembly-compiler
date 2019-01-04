@@ -15,17 +15,23 @@ module type CODE_GEN = sig
   val cons_tbl : sexpr list -> (constant * (int * string)) list
 end;;
 
-
-let count = (ref 0);;
-let env_count = (ref 0);;
-let args_count = (ref 0);;
-
 module Code_Gen : CODE_GEN = struct
 
+  (* Update 5.1, 1:05
+        Done:
+          .1. Fix bugs in Box
+          .2. Add more tests
+          .3. A bit order in tests & code
+
+        TODO:
+          .1. Implement LambdaOpt', and check it
+          .2. Implement ApplicTP', and check it
+          .3. check again all tests of box, and fix box if needed
+  *)
 
   let count = (ref 0);;
   let env_count = (ref 0);;
-
+  let args_count = (ref 0);;
 
   (* Helper function, scan AST & collect const sexprs, return sexprs list *)
   let rec scan_ast asts consts = 
