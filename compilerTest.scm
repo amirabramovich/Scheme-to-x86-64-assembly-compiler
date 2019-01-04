@@ -77,6 +77,11 @@ y ; (0 . 1)
     (set! x 3)
     x
         ) 1) ; 3, VarParam
+((lambda (x)
+    ((lambda ()
+        (set! x 2)
+        x))
+        ) 1) ; 2, VarBound, Set, works
 "----------------------"
 
 
@@ -113,8 +118,27 @@ y ; (0 . 1)
 "----------------------"
 
 
+;; LambdaOpt
+;; "LambdaOpt"
+;; (define (func .  x) x)
+;; (func 3) ; (3)
+;; ((lambda (a b . c) (+ a b))1 2) ; 3
+;; "----------------------"
+
+
 ;; Applic
 "Applic"
+((lambda (x)
+    (+
+        ((lambda ()
+            (begin
+                (set! x 2)
+                0)
+                    ))
+        ((lambda ()
+            1))
+                )
+                    ) 2) ; 1
 ((lambda (x)
     (* (x 1 2) 2))
         (lambda (y z) (+ y z))) ; 6
@@ -149,43 +173,57 @@ y ; (0 . 1)
 ;;                         (set! x y)
 ;;                         y)
 ;;                         ))))
-;; (foo 0 1) ; (0 . 1)
+;; (foo 0 1) ; (0 . 1), Failed
 "----------------------"
 
 
 ;;Box
 "Box"
 ((lambda (x)
-    (+
-        ((lambda ()
-            (begin
-                (set! x 2)
-                4)
-                    ))
-        ((lambda ()
-            2))
-                )
-                    ) 2) ; 6
-((lambda (x)
     (lambda ()
-        (set! x 3))
+        (set! x 2))
     x
         ) 1) ; 1, VarParam, BoxGet', Fixed
+
+;; ((lambda (x)
+;;     ((lambda ()
+;;         (set! x 2)))
+;;     x
+;;         ) 1) ; 2, Param- BoxGet', Bound- BoxSet', Failed
+
 ((lambda (x)
     (set! x 3)
     ((lambda ()
         x))
-    ) 1) ; 3, VarParam, BoxSet'
-((lambda (x y)
-(if x ((lambda ()
-    (set! y x)
-    y))
-    (lambda (z) (set! x z)))) 1 2) ; 1
+    ) 1) ; 3, VarParam, BoxSet', VarBound, BoxGet'
+
+((lambda (x)
+    (set! x 4)
+    ((lambda ()
+        x))
+       ) 1) ; 4, BoxGet', VarBound, BoxSet' VarParam, works
+
+;; ((lambda (x)
+;;     ((lambda()
+;;         (set! x 3)))
+;;     ((lambda()
+;;         x))
+;;         ) 1) ; 3, BoxGet', VarBound, BoxSet', VarBound, Failed
+
+;; ((lambda (x y)
+;;     (if x ((lambda ()
+;;             (set! y x)
+;;             x))
+;;     ((lambda (z)
+;;         (set! x z)
+;;         x) 2)))
+;;             1 2) ; 1, Failed
+
 ;; ((lambda (x)
 ;;     (lambda ()
 ;;         (set! x 3))
 ;;     (if x #f #t)
-;;             x) 1) ; 1 (VarParam, Box', BoxGet')
+;;             x) 1) ; 1 (VarParam, Box', BoxGet'), TODO: check where first fail
 
 "----------------------"
 

@@ -273,8 +273,8 @@ module Code_Gen : CODE_GEN = struct
                                                   "\t" ^ "mov BVARX(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
                                                   "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
       | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; VarParam, BoxGet' \n" (* fix bug here *)
-                                   (* ^ "\t" ^ "mov rax, qword [rax]" ^ "\n" *)
-      | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; VarBound, BoxGet' \n" ^
+                                   (* ^ "\t" ^ "mov rax, qword[rax] \n" *)
+      | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; VarBound, BoxGet' \n" ^ (* works *)
                                             "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
                                             "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
                                             "\t" ^ "mov rax, qword [rax]" ^ "\n"
@@ -283,10 +283,10 @@ module Code_Gen : CODE_GEN = struct
                                           "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")\n" ^
                                           "\t" ^ "pop qword [rax]\n" ^
                                           "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
-      | BoxSet'(VarBound(_, depth, pos), expr) -> (generate consts fvars expr) ^ 
+      | BoxSet'(VarBound(_, depth, pos), expr) -> (generate consts fvars expr) ^ (* fix bug here *)
                                                   "\t" ^ "push rax ; VarBound, BoxSet' \n" ^
                                                   "\t" ^ "mov rax, qword [rbp +16]\n" ^
-                                                  "\t" ^ "mov rax, BVARX(" ^ (string_of_int depth) ^ ")\n" ^ (* fix bug here *)
+                                                  "\t" ^ "mov rax, BVARX(" ^ (string_of_int depth) ^ ")\n" ^
                                                   "\t" ^ "mov rax, BVARX(" ^ (string_of_int pos) ^ ")\n" ^
                                                   "\t" ^ "pop qword [rax]\n" ^
                                                   "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"

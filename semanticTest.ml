@@ -1256,3 +1256,53 @@ let c29 = (run_semantics (tag_parse_expression (read_sexpr "
               x))
                 ) 1)
                 ")));;
+let c30 = (run_semantics (tag_parse_expression (read_sexpr "    
+((lambda (x)
+    (lambda ()
+        (set! x 3))
+    (if x #f #t)
+            x) 1) 
+            ")));;
+let c31 = (run_semantics (tag_parse_expression (read_sexpr "    
+  ((lambda (x)
+    (set! x 4)
+    ((lambda ()
+        x))
+       ) 1)
+       ")));;
+let c32 = (run_semantics (tag_parse_expression (read_sexpr "
+       ((lambda (x)
+    ((lambda ()
+        (set! x 2)))
+    x
+        ) 1) 
+        ")));;
+let c33 = (run_semantics (tag_parse_expression (read_sexpr "
+        ((lambda (x)
+    ((lambda ()
+        (set! x 2)
+        x))
+        ) 1)
+        ")));;
+let c34 = (run_semantics (tag_parse_expression (read_sexpr "
+        ((lambda (x)
+        (+
+            ((lambda ()
+                (begin
+                    (set! x 2)
+                    0)
+                        ))
+            ((lambda ()
+                1))
+                    )
+                        ) 2)
+                        ")));;
+
+let c35 = (run_semantics (tag_parse_expression (read_sexpr "  
+  ((lambda (x)
+    ((lambda()
+        (set! x 3)))
+    ((lambda()
+        x))
+        ) 1)
+        ")));;
