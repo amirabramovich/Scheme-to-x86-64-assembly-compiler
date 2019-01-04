@@ -16,8 +16,8 @@ let string_to_asts s = List.map Semantics.run_semantics
 let primitive_names_to_labels = Code_Gen.primitive_names_to_labels;; 
 
 let make_prologue consts_tbl fvars_tbl =
-  let get_const_address const = "const_tbl+" ^ string_of_int(Code_Gen.get_const_addr const consts_tbl) in
-  let get_fvar_address const = "fvar_tbl+" ^ string_of_int(Code_Gen.get_fvar_addr const fvars_tbl) ^ "*WORD_SIZE" in
+  let get_const_address const = "const_tbl + " ^ string_of_int(Code_Gen.get_const_addr const consts_tbl) in
+  let get_fvar_address const = "fvar_tbl + " ^ string_of_int(Code_Gen.get_fvar_addr const fvars_tbl) ^ " * WORD_SIZE" in
   let make_primitive_closure (prim, label) =
 "    MAKE_CLOSURE(rax, SOB_NIL_ADDRESS, " ^ label  ^ ")
     mov [" ^ (get_fvar_address prim)  ^ "], rax" in
@@ -76,7 +76,8 @@ code_fragment:
     ;; This is where we emulate the missing (define ...) expressions
     ;; for all the primitive procedures.
 " ^ (String.concat "\n" (List.map make_primitive_closure primitive_names_to_labels)) ^ "
-    \nuser_code:";;
+    \nuser_code:
+";;
 
 (* TODO: add here implementation of apply in assembly *)
 let epilogue = " 
