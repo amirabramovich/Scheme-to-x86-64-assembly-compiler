@@ -1,6 +1,7 @@
 ;; Tests
 "*** compiler tests ***"
 
+
 ;; Const
 "Const"
 (eq? 1 1) ; int
@@ -11,6 +12,7 @@
 (eq? '(1 2 3 4) '(1 2 3 4)) ; pair
 "----------------------"
 
+
 ;; If
 "If"
 (eq? (if #t #t #f) #t) ; #t
@@ -20,16 +22,19 @@
       (else #t 1 0)) 0) ; 0
 "----------------------"
 
+
 ;; Or
 "Or"
 (eq? (or #f #f) #f); #f
 (eq? (or 1 0 2) 1) ; 1
 "----------------------"
 
+
 ;; And
 "And"
 (and 1 2 3) ; 3
 "----------------------"
+
 
 ;; Seq
 "Seq"
@@ -41,6 +46,7 @@
         )) ; 2
 "----------------------"
 
+
 ;; Define
 "Define"
 (define y (cons 1 2))
@@ -49,11 +55,12 @@ y ; (1 . 2)
 x ; 3
 "----------------------"
 
+
 ;; Set
 "Set"
-(set-car! y 0)
+(set-car! y 0) ; regular
 y ; (0 . 2)
-(set-cdr! y 1)
+(set-cdr! y 1) ; regular
 y ; (0 . 1)
 ((lambda (x)
     (+
@@ -65,8 +72,13 @@ y ; (0 . 1)
         ((lambda ()
             2))
                 )
-                    ) 2) ; 6
+                    ) 2) ; 6, VarBound
+((lambda (x)
+    (set! x 3)
+    x
+        ) 1) ; 3, VarParam
 "----------------------"
+
 
 ;; Lambda
 "Lambda"
@@ -100,6 +112,7 @@ y ; (0 . 1)
                     )) ; 7
 "----------------------"
 
+
 ;; Applic
 "Applic"
 ((lambda (x)
@@ -120,6 +133,7 @@ y ; (0 . 1)
     (+ x y)) ; 3
 "----------------------"
 
+
 ;; ApplicTP
 "ApplicTP"
 ((lambda (x)
@@ -138,6 +152,7 @@ y ; (0 . 1)
 ;; (foo 0 1) ; (0 . 1)
 "----------------------"
 
+
 ;;Box
 "Box"
 ((lambda (x)
@@ -151,11 +166,26 @@ y ; (0 . 1)
             2))
                 )
                     ) 2) ; 6
-;; ((lambda (x y)
-;; (if x ((lambda ()
-;;     (set! y x)
-;;     y))
-;;     (lambda (z) (set! x z)))) 1 2) ; 1
+((lambda (x)
+    (lambda ()
+        (set! x 3))
+    x
+        ) 1) ; 1, VarParam, BoxGet', Fixed
+((lambda (x)
+    (set! x 3)
+    ((lambda ()
+        x))
+    ) 1) ; 3, VarParam, BoxSet'
+((lambda (x y)
+(if x ((lambda ()
+    (set! y x)
+    y))
+    (lambda (z) (set! x z)))) 1 2) ; 1
+;; ((lambda (x)
+;;     (lambda ()
+;;         (set! x 3))
+;;     (if x #f #t)
+;;             x) 1) ; 1 (VarParam, Box', BoxGet')
 
 "----------------------"
 

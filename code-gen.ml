@@ -264,8 +264,7 @@ module Code_Gen : CODE_GEN = struct
                                           "\t" ^ "mov qword [fvar_tbl + " ^ (string_of_int (get_fvar_addr v fvars)) ^ " * WORD_SIZE], rax" ^ 
                                           " ; VarFree, Set \n" ^
                                           "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
-      (* TODO: check this case *)
-      | Set'(Var'(VarParam(_, pos)), expr) -> (generate consts fvars expr) ^
+      | Set'(Var'(VarParam(_, pos)), expr) -> (generate consts fvars expr) ^ (* works *)
                                               "\t" ^ "mov qword PVAR(" ^ (string_of_int pos) ^ "), rax" ^ " ; VarParam, Set \n" ^
                                               "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
       | Set'(Var'(VarBound(_, depth, pos)), expr) -> (generate consts fvars expr) ^ (* works *)
@@ -273,6 +272,24 @@ module Code_Gen : CODE_GEN = struct
                                                   "\t" ^ "mov rbx, BVARX(" ^ (string_of_int depth)^ ")" ^  "\n" ^
                                                   "\t" ^ "mov BVARX(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
                                                   "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+      | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; VarParam, BoxGet' \n" (* fix bug here *)
+                                   (* ^ "\t" ^ "mov rax, qword [rax]" ^ "\n" *)
+      | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; VarBound, BoxGet' \n" ^
+                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
+                                            "\t" ^ "mov rax, qword [rax]" ^ "\n"
+      | BoxSet'(VarParam(_, pos), expr) -> (generate consts fvars expr) ^ (* works *)
+                                          "\t" ^ "push rax" ^ " ; VarParam, BoxSet' \n" ^
+                                          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")\n" ^
+                                          "\t" ^ "pop qword [rax]\n" ^
+                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
+      | BoxSet'(VarBound(_, depth, pos), expr) -> (generate consts fvars expr) ^ 
+                                                  "\t" ^ "push rax ; VarBound, BoxSet' \n" ^
+                                                  "\t" ^ "mov rax, qword [rbp +16]\n" ^
+                                                  "\t" ^ "mov rax, BVARX(" ^ (string_of_int depth) ^ ")\n" ^ (* fix bug here *)
+                                                  "\t" ^ "mov rax, BVARX(" ^ (string_of_int pos) ^ ")\n" ^
+                                                  "\t" ^ "pop qword [rax]\n" ^
+                                                  "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
       | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars) exprs) 
       | Or'(exprs) -> 
           let currIdx = !count in
@@ -296,26 +313,6 @@ module Code_Gen : CODE_GEN = struct
           "\t" ^ "Lelse" ^ (string_of_int currIdx) ^ ":\n" ^
           (generate consts fvars dif) ^ 
           "\t" ^ "LexitIf" ^ (string_of_int currIdx) ^ ":\n"
-      (* TODO: check BoxGet' *)
-      | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; VarParam, BoxGet' \n" ^ 
-                                     "\t" ^ "mov rax, qword [rax]" ^ "\n"
-      | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; VarBound, BoxGet' \n" ^
-                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
-                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
-                                            "\t" ^ "mov rax, qword [rax]" ^ "\n"
-      (* TODO: check this case *)
-      | BoxSet'(VarParam(_, pos), expr) -> (generate consts fvars expr) ^ 
-                                          "\t" ^ "push rax" ^ " ; VarParam, BoxSet' \n" ^
-                                          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")\n" ^
-                                          "\t" ^ "pop qword [rax]\n" ^
-                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
-      | BoxSet'(VarBound(_, depth, pos), expr) -> (generate consts fvars expr) ^ 
-                                                  "\t" ^ "push rax ; VarBound, BoxSet' \n" ^
-                                                  "\t" ^ "mov rax, qword [rbp +16]\n" ^
-                                                  "\t" ^ "mov rax, BVARX(" ^ (string_of_int depth) ^ ")\n" ^ (* fix bug here *)
-                                                  "\t" ^ "mov rax, BVARX(" ^ (string_of_int pos) ^ ")\n" ^
-                                                  "\t" ^ "pop qword [rax]\n" ^
-                                                  "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
       | LambdaSimple'(vars, body) -> 
           let (curr_count, curr_env) = (!count, !env_count) in
           count := !count + 1;
