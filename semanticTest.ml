@@ -1152,3 +1152,67 @@ let c17 = (run_semantics (tag_parse_expression (read_sexpr "
 let c18 = (run_semantics (tag_parse_expression (read_sexpr "
     ((adder 3) 9)
         ")));;
+let c19 = (run_semantics (tag_parse_expression (read_sexpr "  
+        ((lambda (x y)
+        (if x ((lambda ()
+                (set! y x)
+                y))
+            (lambda (z) (set! x z)))) 1 2)
+            ")));;
+let c20 = (run_semantics (tag_parse_expression (read_sexpr "  
+    ((lambda (x)
+    (begin
+        (lambda (y) 
+        (set! x y) 1)
+        x)
+        ) 1)
+            ")));;
+let c21 = (run_semantics (tag_parse_expression (read_sexpr "  
+            (+
+    ((lambda (x)
+            (set! x 2)
+            x) 1)
+    ((lambda (x) x) 2))
+    ")));;
+(* Box VarBound *)
+let c22 = (run_semantics (tag_parse_expression (read_sexpr "  
+((lambda (x)
+        (+
+        ((lambda ()
+            (begin
+            (set! x 2)
+            (+ 2 2)
+            )
+            ))
+            ((lambda (y)
+                x) 0)
+            )
+            ) 2) 
+            ")));;
+(* no set *)
+let c23 = (run_semantics (tag_parse_expression (read_sexpr "  
+            ((lambda (x)
+            (+
+                ((lambda ()
+                    (begin
+                        4)
+                            ))
+                ((lambda ()
+                    x))
+                        )
+                            ) 2) 
+                            ")));;
+(* Set VarBound, no Box *)
+let c23 = (run_semantics (tag_parse_expression (read_sexpr "    
+                            ((lambda (x)
+    (+
+        ((lambda ()
+            (begin
+                (set! x 2)
+                4)
+                    ))
+        ((lambda ()
+            2))
+                )
+                    ) 2)
+                    ")));;
