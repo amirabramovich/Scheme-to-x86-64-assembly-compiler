@@ -326,12 +326,12 @@ module Code_Gen : CODE_GEN = struct
           let args = List.rev args in
           let len = List.length args in
           (* Helper function, gnenerate applic *)
-          let rec applic_rec args =
+          let rec applic_gen args =
               match args with
                 | car :: cdr -> 
                     (generate consts fvars car) ^
                     "\t" ^ "push rax ; Applic \n" ^ 
-                    applic_rec cdr
+                    applic_gen cdr
                 | [] -> 
                     "\t" ^ "push " ^ (string_of_int len) ^ "\n\n" ^
                     (generate consts fvars op) ^
@@ -347,19 +347,19 @@ module Code_Gen : CODE_GEN = struct
                     (* "\tmov rax, 6666\n"^
                     "\tpush rax\n"^ *)
 
-          (applic_rec args)
+          (applic_gen args)
       | ApplicTP'(op, args) -> 
           let args = List.rev args in
           let len = List.length args in
           (* Helper function, gnenerate applic_tp *)
-          let rec applic_rec args =
+          let rec applicTP_gen args =
             match args with
               | car :: cdr -> 
                   (generate consts fvars car) ^ 
                   "\t" ^ "push rax ; ApplicTP \n" ^ 
-                  applic_rec cdr
+                  applicTP_gen cdr
               | [] -> 
-                  "\t" ^ "push " ^ (string_of_int len) ^ "\n" ^
+                  "\t" ^ "push " ^ (string_of_int len) ^ " ; ApplicTP \n" ^
                   (generate consts fvars op) ^
                   "\t" ^ "mov r9, [rax + TYPE_SIZE] ; closure's env \n" ^
                   "\t" ^ "push r9 ; push env\n" ^
@@ -377,7 +377,7 @@ module Code_Gen : CODE_GEN = struct
 
           (* "\tmov rax, 9999\n"^
           "\tpush rax\n"^ *)
-          (applic_rec args)
+          (applicTP_gen args)
       | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;

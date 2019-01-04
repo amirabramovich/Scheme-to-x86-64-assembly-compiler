@@ -110,6 +110,7 @@ dq %1
 
 %define PARAM_COUNT qword [rbp+3*WORD_SIZE]
 
+; .shift_frame: ; for debug
 %macro SHIFT_FRAME 1 ; %1 = size of frame (constant) ; 
 	push r8
 	push rax
