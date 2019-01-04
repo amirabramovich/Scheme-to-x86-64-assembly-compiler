@@ -26,6 +26,11 @@
 (eq? (or 1 0 2) 1) ; 1
 "----------------------"
 
+;; And
+"And"
+(and 1 2 3) ; 3
+"----------------------"
+
 ;; Seq
 "Seq"
 ((lambda ()      
@@ -67,6 +72,32 @@ y ; (0 . 1)
 ((lambda ()
     (+ 1 2)
     (+ 1 1))) ; 2
+(((lambda (a b)
+            (begin 1
+            2
+            (lambda () 
+                "done!")
+                      )) 0 1)) ; "done!"
+(cons 1 (cons 2 3)) ; (1 2 . 3)
 "----------------------"
+
+;; ApplicTP
+"ApplicTP"
+((lambda (x)
+            (boolean? x)) #t) ; #t
+((lambda (x y)
+        (cons x y)) 1 2) ; (1 . 2)
+((lambda () 
+    (and ((lambda() 1)) ((lambda() 2)) ((lambda () 3))))) ; 3
+(define adder (lambda (x) (lambda (y) (+ x y))))
+((adder 3) 9) ; 12
+;; (define foo (lambda (x y) 
+;;             (cons x ((lambda () 
+;;                         (set! x y)
+;;                         y)
+;;                         ))))
+;; (foo 0 1) ; (0 . 1)
+"----------------------"
+
 
 "*** End of tests ***"

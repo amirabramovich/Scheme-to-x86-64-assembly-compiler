@@ -1118,3 +1118,37 @@ let c10 = run_semantics (tag_parse_expression (read_sexpr "
       (+ 3 4)
       (* 1 2))
         ))"));; 
+let c11 = run_semantics (tag_parse_expression (read_sexpr 
+        "((lambda (x)
+            (boolean? x)) #t)"));;
+let c12 = run_semantics (tag_parse_expression (read_sexpr "
+(((lambda (a b)
+            (begin 1
+            2
+            (lambda () 
+                \"done!\")
+                      )) 0 1))
+                      "));; (* done! *)
+let c13 = (run_semantics (tag_parse_expression (read_sexpr
+                      "(define foo8 (lambda (x y) 
+                                        (cons x ((lambda () 
+                                                  (set! x y)
+                                                  y)
+                                                    ))))")));;
+let c14 = (run_semantics (tag_parse_expression (read_sexpr "
+                                                    ((lambda (x y)
+                                                      (cons x y)) 1 2)
+                                                    ")));;
+let c15 = (run_semantics (tag_parse_expression (read_sexpr "
+                                  (cons 1 (cons 2 3))
+                                                    ")));;
+let c16 = (run_semantics (tag_parse_expression (read_sexpr "
+((lambda () 
+    (and ((lambda() 1)) ((lambda() 2)) ((lambda () 3)))))
+    ")));;
+let c17 = (run_semantics (tag_parse_expression (read_sexpr "
+    (define adder (lambda (x) (lambda (y) (+ x y))))
+    ")));;
+let c18 = (run_semantics (tag_parse_expression (read_sexpr "
+    ((adder 3) 9)
+        ")));;
