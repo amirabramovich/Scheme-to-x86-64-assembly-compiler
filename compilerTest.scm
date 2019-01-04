@@ -119,11 +119,12 @@ y ; (0 . 1)
 
 
 ;; LambdaOpt
-;; "LambdaOpt"
-;; (define (func .  x) x)
-;; (func 3) ; (3)
-;; ((lambda (a b . c) (+ a b))1 2) ; 3
-;; "----------------------"
+"LambdaOpt"
+((lambda (a . b) 1) 1) ; 1
+(define (func .  x) x) ; expr' = Def' (Var' (VarFree "func"), LambdaOpt' ([], "x", Var' (VarParam ("x", 0))))
+(func 3) ; (3)
+((lambda (a b . c) (+ a b))1 2) ; 3
+"----------------------"
 
 
 ;; Applic

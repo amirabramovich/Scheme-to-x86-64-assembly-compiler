@@ -913,3 +913,17 @@ foo.scm
 ; (define g (lambda(x)x))
 ; (define f (lambda(x)(+ x 1)))
 ; ((lambda (x) (f (g (g x))))5)
+
+
+
+*****
+5.1
+
+ LambdaOpt prev
+
+      raise X_not_yet_implemented
+        
+          (* let (curr_count, curr_env) = (!count, !env_count) in
+          count := !count + 1;
+          env_count := !env_count + 1;
+          assemLambda vars body ^ (lcodeOpt body curr_count) *)

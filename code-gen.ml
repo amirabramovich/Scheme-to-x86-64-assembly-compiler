@@ -327,11 +327,14 @@ module Code_Gen : CODE_GEN = struct
           let out = "\n" ^ (assemLambda vars body curr_count curr_env) ^ (lcodeSimple body curr_count) in
           env_count := !env_count - 1; args_count := !args_count - (List.length vars); out
       (* TODO: fix LambdaOpt' case *)
-      | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
-          (* let (curr_count, curr_env) = (!count, !env_count) in
+      | LambdaOpt'(vars, opt, body) ->
+          let allVars = vars @ [opt] in
+          let (curr_count, curr_env) = (!count, !env_count) in
           count := !count + 1;
           env_count := !env_count + 1;
-          assemLambda vars body ^ (lcodeOpt body curr_count) *)
+          args_count := !args_count + (List.length allVars); 
+          let out = "\n" ^ (assemLambda allVars body curr_count curr_env) ^ (lcodeSimple body curr_count) in
+          env_count := !env_count - 1; args_count := !args_count - (List.length allVars); out
       | Applic'(op, args) | ApplicTP'(op, args) -> 
           let args = List.rev args in
           let len = List.length args in
