@@ -1,4 +1,7 @@
+#use "semantic-analyser.ml";;
 #use "code-gen.ml";;
+open Semantics;;
+open Code_Gen;;
 
 let file_to_string f =
   let ic = open_in f in
@@ -48,8 +51,9 @@ section .text
 main:
     push rbp 
     mov rbp, rsp
+
     ;; set up the heap
-    mov rdi, GB(4) ;; TODO: changed from GB(4)
+    mov rdi, MB(100) ;; TODO: changed from GB(4)
     call malloc
     mov [malloc_pointer], rax
 
@@ -72,8 +76,7 @@ code_fragment:
     ;; This is where we emulate the missing (define ...) expressions
     ;; for all the primitive procedures.
 " ^ (String.concat "\n" (List.map make_primitive_closure primitive_names_to_labels)) ^ "
-    \nuser_code:
-";;
+    \nuser_code:";;
 
 (* TODO: add here implementation of apply in assembly *)
 let epilogue = " 
