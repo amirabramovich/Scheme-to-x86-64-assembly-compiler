@@ -122,8 +122,37 @@ y ; (0 . 1)
 "LambdaOpt"
 ((lambda (a . b) 1) 1) ; 1
 (define (func .  x) x) ; expr' = Def' (Var' (VarFree "func"), LambdaOpt' ([], "x", Var' (VarParam ("x", 0))))
-(func 3) ; (3)
-((lambda (a b . c) (+ a b))1 2) ; 3
+(func 2) ; (2)
+((lambda (a b . c) (+ a b)) 1 2) ; 3
+;; TODO: add more complicated cases of LambdaOpt', check it, and fix code if needed
+((lambda (a . b)
+        a) 4 2) ; 4
+((lambda (a . b)
+        a) 5) ; 5
+((lambda (a b . c)
+      (lambda () c)
+      ((lambda ()
+        ((lambda () 6))))) 1 2) ; 6
+((lambda (a b . c)
+      (lambda () c)
+      ((lambda ()
+        ((lambda () 7))))) 1 2 3) ; 7
+((lambda (a b . c)
+      (lambda ()
+        (set! a (+ a a))
+        c
+      )
+      (lambda () (set! b (lambda () (set! c 5))))
+      (+ a b)
+    ) 5 3) ; 8
+((lambda (a b . c)
+      (lambda ()
+        (set! a (+ a a))
+        c
+      )
+      (lambda () (set! b (lambda () (set! c 5))))
+      (+ a b)
+    ) 6 3 4) ; 9
 "----------------------"
 
 
