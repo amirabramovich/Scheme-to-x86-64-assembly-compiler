@@ -113,10 +113,8 @@ dq %1
 %macro SHIFT_FRAME 1 ; %1 = size of frame (constant) ; 
 	push r8
 	push rax
-	push rdx
 	mov rax, PARAM_COUNT
-	add rax, 4
-	mov rdx, qword[rbp]
+	add rax, 5
 %assign i 1
 %rep %1
 	dec rax
@@ -124,10 +122,9 @@ dq %1
 	mov [rbp+WORD_SIZE*rax], r8
 %assign i i+1
 %endrep
-	mov rbp, rdx
-	pop rdx
 	pop rax
-	mov r8, rax
+	mov r8, PARAM_COUNT
+	add r8, 5
 	shl r8, 3
 	add rsp, r8
 	pop r8

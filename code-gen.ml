@@ -372,10 +372,11 @@ module Code_Gen : CODE_GEN = struct
                               "\tmov r9, [rax+TYPE_SIZE] ; closure's env\n"^
                               "\tpush r9 ; push env\n"^
                               "\tpush qword [rbp + 8] ; old ret addr\n"^
+                              "\tmov r9, qword[rbp]\n"^
                               "\tSHIFT_FRAME "^(string_of_int (len+4))^"\n"^
-                              "\tmov r9, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
-                              "\tjmp r9\n"
-                              (* "\tadd rsp, 8*1 ; pop env\n"^
+                              "\tmov rbp, r9\n"^
+                              "\tjmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"
+                              (*"\tadd rsp, 8*1 ; pop env\n"^
                               "\tpop rbx ; pop arg count\n"^ *)
                               (* "\tinc rbx\n"^ *)
                               (* "\tshl rbx, 3 ; rbx = rbx * 8\n"^
