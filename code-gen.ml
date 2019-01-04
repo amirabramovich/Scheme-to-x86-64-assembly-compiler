@@ -4,44 +4,17 @@ module type CODE_GEN = sig
   val make_consts_tbl : expr' list -> (constant * (int * string)) list
   val make_fvars_tbl : expr' list -> (string * int) list
   val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
+
+  (* TODO: delete later *)
   val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
   val get_fvar_addr : 'a -> ('a * 'b) list -> 'b
   val primitive_names_to_labels : (string * string) list
-
-  (* Add funcs for tests *)
-  (* TODO: delete later *)
   val scan_ast : expr' list -> sexpr list
   val remove_dups : 'a list -> 'a list
   val expand_lst : sexpr list -> sexpr list
   val cons_tbl : sexpr list -> (constant * (int * string)) list
 end;;
 
-(* 
-  Update 3.1 2:45
-      Done:
-        .1. Order in code, more functional (less duplication of code)
-        .2. Support LambdaOpt'/BoxSet'/Var's in scan_ast function
-        .3. Run a bit tests .. 
-
-      TODO: 
-        .1. LambdaOpt', implement lcodeOpt function ("assembly code" of Lcode label)
-        .2. ApplicTP'
-        .3. Make code more short, more functional
-        .4. Make order in code (Blocks, newlines, spaces, tabs, names, "Uniform conventions syntax", etc ..)
-        .5. Put documantation on code
-
-  Update 2.1, 20:20
-      Done:
-        .1. Done lambda simple.
-        .2. moved our assembly funcs to epilog here. (should be in epilog) 
-
-      TODO:
-        .0. complete ast scan which finds constants and freeVars in ast (code-gen scan funcs)
-        .1. finish LambdaOPT & ApplicTP'.
-        .2. write apply variadic in assembly
-        .3. check unimplemented functions in stdlib.scm (via pdf) and implement them.
-        .4. Make order in code & run tests (e.g, from facebook) 
-  *)
 
 let count = (ref 0);;
 let env_count = (ref 0);;
@@ -49,7 +22,12 @@ let args_count = (ref 0);;
 
 module Code_Gen : CODE_GEN = struct
 
-  (* 1. Scan the AST (one recursive pass) & collect the sexprs in all Const records - The result is a list of sexprs *)
+
+  let count = (ref 0);;
+  let env_count = (ref 0);;
+
+
+  (* Helper function, scan AST & collect const sexprs, return sexprs list *)
   let rec scan_ast asts consts = 
     match asts with
       | car :: cdr -> (match car with
@@ -68,13 +46,13 @@ module Code_Gen : CODE_GEN = struct
 
   let scan_ast asts = scan_ast asts [] ;;
 
-  (* 2. Convert the list to a set (removing duplicates) *)
+  (* Helper function, convert the list to a set (remove duplicates) *)
   let rec remove_dups lst = 
     match lst with
       | [] -> []
       | car :: cdr -> car :: (remove_dups (List.filter (fun e -> e <> car) cdr)) ;;
 
-  (* 3. Expand list include all sub-constants, list should be sorted topologically, Logic of code from ps #11, 2.2.1 *)
+  (* Helper func, expand lst include all sub-consts, lst should be sorted topologically (code logic from ps #11, 2.2.1) *)
   let rec expand_lst lst newLst =
     match lst with
       | car :: cdr -> 
@@ -111,61 +89,61 @@ module Code_Gen : CODE_GEN = struct
     let lst_string = List.map (fun s -> "const_tbl+" ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
     String.concat ", " lst_string;;
 
-  (* Cons_tbl helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
+  (* Helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
   let rec cons_tbl consts tbl addr =
     match consts with
     | car :: cdr -> 
       (match car with
         | Bool _ | Nil -> cons_tbl cdr tbl addr
-        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR('" ^ String.make 1 ch ^ "') ;my address is " ^ 
+        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR('" ^ String.make 1 ch ^ "') ; my address is " ^ 
             (string_of_int addr)))]) (addr + size_of car)
-        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING \"" ^ expr ^ "\" ;my address is " ^ 
+        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING \"" ^ expr ^ "\" ; my address is " ^ 
             (string_of_int addr)))]) (addr + size_of car)
         | Number(Int num) ->
-            cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ;my address is " ^
+            cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
               (string_of_int addr)))]) (addr + size_of car)
         | Number(Float num) -> 
-            cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ") ;my address is " ^ 
+            cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ") ; my address is " ^ 
               (string_of_int addr)))]) (addr + size_of car)
         | Symbol sym -> 
-            cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl+" ^ 
-              string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ") ;my address is " ^ (string_of_int addr)))]) (addr + size_of car) 
+            cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl + " ^ 
+              string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car) 
         | Pair (f, s) -> 
             cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl+" ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ 
-              ", const_tbl+" ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ") ;my address is " ^ (string_of_int addr)))]) (addr + size_of car)
-        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec tbl ^ " ;my address is " ^ 
+              ", const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car)
+        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec tbl ^ " ; my address is " ^ 
             (string_of_int addr))]) (addr + size_of car))
     | [] -> tbl ;;
     
   (* Cons_tbl main func *)
   let cons_tbl consts = cons_tbl consts [
-    (Void, (0, "MAKE_VOID ;my address is 0"));
-    (Sexpr(Nil), (1, "MAKE_NIL ;my address is 1"));
-    (Sexpr(Bool false), (2, "MAKE_BOOL(0) ;my address is 2"));
-    (Sexpr(Bool true), (4, "MAKE_BOOL(1) ;my address is 4"));
+    (Void, (0, "MAKE_VOID ; my address is 0"));
+    (Sexpr(Nil), (1, "MAKE_NIL ; my address is 1"));
+    (Sexpr(Bool false), (2, "MAKE_BOOL(0) ; my address is 2"));
+    (Sexpr(Bool true), (4, "MAKE_BOOL(1) ; my address is 4"));
     ] 6;;
-    
-
-  (*  expr' list -> (constant * (int * string)) list *)
+  
+  (* Signature func, expr' list -> (constant * (int * string)) list *)
   let make_consts_tbl asts = cons_tbl (remove_dups (expand_lst (remove_dups (scan_ast asts))));;
 
-  (* ----------------------fvar table---------------------- *)
+
+  (* fvar table *)
   let rec scan_fvars asts fvars = 
     match asts with
-      | car :: cdr -> (match car with
-                        | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
-                        | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars) (* TODO: check if add more cases *)
-                        | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> 
-                            scan_fvars cdr fvars @ (scan_fvars [body] fvars) (* Add LOpt' *)
-                        | Or' exprs | Seq' exprs -> 
-                            scan_fvars cdr fvars @ List.concat ((List.map (fun expr -> scan_fvars [expr] fvars)) exprs) (* Add Seq' & Or' *)
-                        | If' (test, dit, dif) -> 
-                            scan_fvars cdr fvars @ scan_fvars [test; dit; dif] fvars (* Add If' *)
-                        | Set'(_ , expr) -> scan_fvars cdr fvars @ scan_fvars [expr] fvars
-                        (* Add Applic' & ApplicTP' *)
-                        | Applic' (op, exprs) | ApplicTP' (op, exprs) -> 
-                            scan_fvars cdr fvars @ List.concat (List.map (fun expr -> scan_fvars [expr] fvars) ([op] @ exprs))
-                        | _ -> scan_fvars cdr fvars)
+      | car :: cdr -> 
+        (match car with
+          | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
+          | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars) (* TODO: check if add more cases *)
+          | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> 
+              scan_fvars cdr fvars @ (scan_fvars [body] fvars)
+          | Or' exprs | Seq' exprs -> 
+              scan_fvars cdr fvars @ List.concat ((List.map (fun expr -> scan_fvars [expr] fvars)) exprs)
+          | If' (test, dit, dif) -> 
+              scan_fvars cdr fvars @ scan_fvars [test; dit; dif] fvars
+          | Set'(_ , expr) -> scan_fvars cdr fvars @ scan_fvars [expr] fvars
+          | Applic' (op, exprs) | ApplicTP' (op, exprs) -> 
+              scan_fvars cdr fvars @ List.concat (List.map (fun expr -> scan_fvars [expr] fvars) ([op] @ exprs))
+          | _ -> scan_fvars cdr fvars)
       | _ -> fvars ;;
 
   let scan_fvars asts = scan_fvars asts [] ;;
@@ -190,27 +168,28 @@ module Code_Gen : CODE_GEN = struct
 
   let rec cons_fvars fvars tbl addr =
     match fvars with
-    | car :: cdr -> cons_fvars cdr (tbl @ [(car, addr)]) (addr + 1) 
-    | [] -> tbl ;;
+      | car :: cdr -> cons_fvars cdr (tbl @ [(car, addr)]) (addr + 1) 
+      | [] -> tbl ;;
     
   let cons_fvars fvars = cons_fvars (remove_dups (saved_fvars @ fvars)) [] 0;;
 
-  (* expr' list -> (string * int) list *)
+  (* Signature func, expr' list -> (string * int) list *)
   let make_fvars_tbl asts = cons_fvars (scan_fvars asts);;
+
 
   let get_fvar_addr fvar tbl = List.assoc fvar tbl;;
 
-  (* (constant * (int * string)) list -> (string * int) list -> expr' -> string *)
+  (* Signature func, (constant * (int * string)) list -> (string * int) list -> expr' -> string *)
   let rec generate consts fvars e = 
       (* Helper function for Lcode of LambdaSimple' *)
       let lcodeSimple body curr_count = 
-        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
+        "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaSimple body below:\n" ^
         (generate consts fvars body) ^ 
         "\t" ^ "leave ; done parsing lambdaSimple body above\n" ^
         "\t" ^ "ret\n" ^
-        "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
+        "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
       (* Helper function for Lcode of LamdaOpt' *)
       let lcodeOpt body curr_count =
@@ -229,12 +208,12 @@ module Code_Gen : CODE_GEN = struct
       let assemLambda vars body curr_count curr_env =
         let len = !args_count in
         "\t" ^ "lambdaSimple" ^ (string_of_int curr_count) ^ ":\n" ^ 
-        "\t" ^ "MALLOC r10, 8*(1+" ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
+        "\t" ^ "MALLOC r10, 8 * ( 1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
         "\t" ^ "mov r11, r10 ; copy of ExtEnv address\n" ^
         "\t" ^ "mov r12, 0 ; i\n" ^
         "\t" ^ "mov r13, " ^ (string_of_int curr_env) ^ " ; |env|\n" ^
         "\t" ^ "mov r15, rbp ; copy of rbp\n" ^
-        "\t" ^ ".copy_env:\n" ^
+        "\n\t" ^ ".copy_env:\n" ^
         "\t\t" ^ "cmp r12, r13\n" ^
         "\t\t" ^ "je .done_copy_env\n" ^
         "\t\t" ^ "add r11, 8\n" ^
@@ -243,14 +222,14 @@ module Code_Gen : CODE_GEN = struct
         "\t\t" ^ "mov r15, qword[r15] ; jmp to next env\n" ^
         "\t\t" ^ "inc r12" ^ " ; inc counter of loop\n" ^ 
         "\t\t" ^ "jmp .copy_env" ^ " ; back to loop\n" ^
-        "\t" ^ ".done_copy_env:\n" ^
-        "\t" ^ "mov r12, 0 ; i\n" ^
-        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
-        "\t" ^ "mov r15, rbp ; r15 = rbp\n" ^
-        "\t" ^ "add r15, 32 ; r15 = address of first arg\n" ^
-        "\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0]\n" ^
-        "\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n" ^
-        "\t" ^ ".copy_params:\n" ^
+        "\n\t" ^ ".done_copy_env:\n" ^
+        "\t\t" ^ "mov r12, 0 ; i\n" ^
+        "\t\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
+        "\t\t" ^ "mov r15, rbp ; r15 = rbp\n" ^
+        "\t\t" ^ "add r15, 32 ; r15 = address of first arg\n" ^
+        "\t\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0]\n" ^
+        "\t\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n" ^
+        "\n\t" ^ ".copy_params:\n" ^
         "\t\t" ^ "cmp r12, r13\n" ^
         "\t\t" ^ "je .done_copy_params\n" ^
         "\t\t" ^ "mov r9, [r15] ; r9 = Param(i)\n" ^
@@ -259,10 +238,10 @@ module Code_Gen : CODE_GEN = struct
         "\t\t" ^ "add r15, 8\n" ^
         "\t\t" ^ "inc r12\n" ^
         "\t\t" ^ "jmp .copy_params\n" ^
-        "\t" ^ ".done_copy_params:\n" ^
-        "\t" ^ "mov [r10], r11\n" ^
-        "\t" ^ "MAKE_CLOSURE(rax, r10, Lcode" ^ (string_of_int curr_count) ^ ")\n" ^
-        "\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
+        "\n\t" ^ ".done_copy_params:\n" ^
+        "\t\t" ^ "mov [r10], r11\n" ^
+        "\t\t" ^ "MAKE_CLOSURE(rax, r10, Lcode" ^ (string_of_int curr_count) ^ ")\n" ^
+        "\t\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
 
     match e with
     | Const' (expr) -> "\t" ^ "mov rax, const_tbl+" ^ (string_of_int (get_const_addr expr consts)) ^ " ; mov rax, AddressInConstTable\n"
