@@ -1097,6 +1097,24 @@ allPassed cyan all_test;;
  
 print grn "END TESTS";;
 
+
+(* Prepare tests for compiler *)
 let c1 = run_semantics (tag_parse_expression (read_sexpr "((lambda (x) (g (g x))) 1)"));;
 let c2 = run_semantics (tag_parse_expression (read_sexpr "((lambda (x) x) 1)"));;
 let c3 = run_semantics (tag_parse_expression (read_sexpr "((lambda (x) (+ x x)) 1)"));;
+let c4 = run_semantics (tag_parse_expression (read_sexpr "((lambda () (+ 1 2) (+ 1 1)))"));;
+let c5 = run_semantics (tag_parse_expression (read_sexpr "(define (func .  x) x)"));;
+let c6 = run_semantics (tag_parse_expression (read_sexpr "(func 3)"));;
+let c7 = run_semantics (tag_parse_expression (read_sexpr "(lambda (a b . c) (+ a b))"));;
+let c8 = run_semantics (tag_parse_expression (read_sexpr "((lambda (a b . c) (+ a b)) 1 2)"));;
+let c9 = run_semantics (tag_parse_expression (read_sexpr "
+(cond (#f 1) 
+    (#f 1 2)
+      (else #t 1 0))"));;
+let c10 = run_semantics (tag_parse_expression (read_sexpr "
+((lambda ()      
+      (begin
+        (+ 1 2)
+      (+ 3 4)
+      (* 1 2))
+        ))"));; 
