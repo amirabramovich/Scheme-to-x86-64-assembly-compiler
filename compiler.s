@@ -111,7 +111,6 @@ dq %1
 %define PARAM_COUNT qword [rbp+3*WORD_SIZE]
 
 %macro SHIFT_FRAME 1 ; %1 = size of frame (constant) ; 
-	push r8
 	push rax
 	mov rax, PARAM_COUNT
 	add rax, 5
@@ -127,7 +126,6 @@ dq %1
 	add r8, 5
 	shl r8, 3
 	add rsp, r8
-	pop r8
 %endmacro
 
 ; Creates a short SOB with the

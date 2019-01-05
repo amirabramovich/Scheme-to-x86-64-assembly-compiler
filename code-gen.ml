@@ -16,16 +16,11 @@ module type CODE_GEN = sig
 end;;
 
 
-let count = (ref 0);;
-let env_count = (ref 0);;
-let args_count = (ref 0);;
-
 module Code_Gen : CODE_GEN = struct
-
 
   let count = (ref 0);;
   let env_count = (ref 0);;
-
+  let prev_args = (ref 0);;
 
   (* Helper function, scan AST & collect const sexprs, return sexprs list *)
   let rec scan_ast asts consts = 
@@ -182,7 +177,8 @@ module Code_Gen : CODE_GEN = struct
   (* Signature func, (constant * (int * string)) list -> (string * int) list -> expr' -> string *)
   let rec generate consts fvars e = 
       (* Helper function for Lcode of LambdaSimple' *)
-      let lcodeSimple body curr_count = 
+      let lcodeSimple vars body curr_count = 
+        prev_args := List.length vars;
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaSimple body below:\n" ^
@@ -191,46 +187,30 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "ret\n" ^
         "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
-      (* Helper function for Lcode of LamdaOpt' *)
-      let lcodeOpt body curr_count =
-        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
-        ";; adjust stack for opt args\n" ^ (* TODO: implement Lcode of LambdaOpt' (adjust stack for optional arguments) *)
-        "\t" ^ "xor r15, r15 ; clean r15 (=magic) ? \n" ^
-        "\t" ^ "push r15 ; push magic ? \n" ^ 
-        "\t" ^ "push rbp\n" ^
-        "\t" ^ "mov rbp, rsp\n" ^
-        (generate consts fvars body) ^ 
-        "\t" ^ "leave\n" ^
-        "\t" ^ "ret\n" ^
-        "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
-
       (* Helper function, for generate Lambda *)
-      let assemLambda vars body curr_count curr_env =
-        let len = !args_count in
+      let assemLambda vars body curr_count curr_env len =
         "\t" ^ "lambdaSimple" ^ (string_of_int curr_count) ^ ":\n" ^ 
-        "\t" ^ "MALLOC r10, 8 * ( 1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
+        "\t" ^ "MALLOC r10, 8 * (1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
         "\t" ^ "mov r11, r10 ; copy of ExtEnv address\n" ^
         "\t" ^ "mov r12, 0 ; i\n" ^
-        "\t" ^ "mov r13, " ^ (string_of_int curr_env) ^ " ; |env|\n" ^
-        "\t" ^ "mov r15, rbp ; copy of rbp\n" ^
+        "\t" ^ "mov r13, 1 ; j\n" ^
+        "\t" ^ "mov r15, qword[rbp + 16] ; lexical env\n" ^
         "\n\t" ^ ".copy_env:\n" ^
-        "\t\t" ^ "cmp r12, r13\n" ^
+        "\t\t" ^ "cmp r12, " ^ (string_of_int curr_env) ^ " ; |env|\n" ^
         "\t\t" ^ "je .done_copy_env\n" ^
-        "\t\t" ^ "add r11, 8\n" ^
-        "\t\t" ^ "mov r14, qword[r15 + 16] ; r14 = Env[i]\n" ^
-        "\t\t" ^ "mov [r11], r14 ; ExtEnv[j] = r14\n" ^
-        "\t\t" ^ "mov r15, qword[r15] ; jmp to next env\n" ^
+        "\t\t" ^ "mov r14, qword[r15 + 8 * r12] ; r14 = Env[i]\n" ^
+        "\t\t" ^ "mov [r11 + 8 * r13], r14 ; ExtEnv[j] = r14\n" ^
         "\t\t" ^ "inc r12" ^ " ; inc counter of loop\n" ^ 
+        "\t\t" ^ "inc r13" ^ " ; inc counter of loop\n" ^ 
         "\t\t" ^ "jmp .copy_env" ^ " ; back to loop\n" ^
         "\n\t" ^ ".done_copy_env:\n" ^
         "\t\t" ^ "mov r12, 0 ; i\n" ^
-        "\t\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
         "\t\t" ^ "mov r15, rbp ; r15 = rbp\n" ^
         "\t\t" ^ "add r15, 32 ; r15 = address of first arg\n" ^
         "\t\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0]\n" ^
         "\t\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n" ^
         "\n\t" ^ ".copy_params:\n" ^
-        "\t\t" ^ "cmp r12, r13\n" ^
+        "\t\t" ^ "cmp r12, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
         "\t\t" ^ "je .done_copy_params\n" ^
         "\t\t" ^ "mov r9, [r15] ; r9 = Param(i)\n" ^
         "\t\t" ^ "mov [r14], r9 ; ExtEnv [0][i] = r9\n" ^
@@ -310,9 +290,9 @@ module Code_Gen : CODE_GEN = struct
         let (curr_count, curr_env) = (!count, !env_count) in
         count := !count + 1;
         env_count := !env_count + 1;
-        args_count := !args_count +(List.length vars); 
-        let out = "\n"^(assemLambda vars body curr_count curr_env) ^ (lcodeSimple body curr_count) in
-        env_count := !env_count - 1; args_count := !args_count - (List.length vars); out
+        let len = !prev_args in
+        let out = "\n"^(assemLambda vars body curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
+        env_count := !env_count - 1; out
         
     | LambdaOpt'(vars, opt, body) -> raise X_not_yet_implemented
         (* let (curr_count, curr_env) = (!count, !env_count) in
@@ -335,11 +315,11 @@ module Code_Gen : CODE_GEN = struct
                             "\tpush rbx ; push env\n"^
                             "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
                             "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
-                            "\tinc rbx\n"^ 
+                            (*"\tinc rbx\n"^ *)
                             "\tshl rbx, 3 ; rbx = rbx * 8\n"^
                             "\tadd rsp, rbx ; pop args\n" in 
-                            "\n\tmov rax, 6666 ; begin applic\n"^
-                            "\tpush rax\n"^ 
+                            (*"\n\tmov rax, 6666 ; begin applic\n"^
+                            "\tpush rax\n"^ *)
                             (applic_rec args)
     | ApplicTP'(op, args) -> let args = List.rev args in
                               let len = List.length args in
