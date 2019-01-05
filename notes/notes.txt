@@ -1000,6 +1000,45 @@ lcodeOpt
         "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
 ****
+ApplicTP' back up
+****
+
+      | ApplicTP'(op, args) ->
+          let revArgs = List.rev args in
+          let numArgs = List.length args in
+          (* Helper function, generate applic, in tail position *)
+          let rec applicTP_gen args =
+            match args with
+              | car :: cdr -> 
+                (generate consts fvars car) ^
+                "\t" ^ "push rax" ^ " ; push arg \n" ^
+                applicTP_gen cdr
+              | [] -> 
+                "\t" ^ "push " ^ (string_of_int numArgs) ^ "; push number args \n" ^
+                "\t" ^ "; start parse op \n" ^
+                (generate consts fvars op) ^
+                "\t" ^ "; finish parse op \n" ^
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE] ; closure's env \n" ^
+                "\t" ^ "push rbx ; push env (args) \n" ^
+                (* Add code for ApplicTP' (Logic of code is from Lecture #5, pages 44-46) *)
+                "\t" ^ "push qword[rbp + 8*1] ; push old ret addr \n" ^ 
+                "\t" ^ "mov rsp, rbp ; restore old frame ptr register \n" ^
+                (* Fix the stack *)
+                "\t" ^ "SHIFT_FRAME " ^ (string_of_int (numArgs + 5)) ^ " ; shift frame, where frame size is " ^ (string_of_int (numArgs + 5)) ^ "\n" ^
+                (generate consts fvars op) ^ (* parse op again, for closure code *)
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code \n" ^
+                "\t" ^ "jmp rbx ; jmp to code (closure) \n" ^ (* change call to jmp *)
+                "\t" ^ "add rsp, 8*1 ; pop env (args) \n" ^ 
+                "\t" ^ "pop rbx ; pop number args \n" ^
+                "\t" ^ "inc rbx ; add magic as param (for pop) \n" ^ 
+                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 (calc size args) \n" ^
+                "\t" ^ "add rsp, rbx ; pop args \n" 
+          in
+          "\n\t" ^ "mov rax, MAGIC ; ApplicTP \n" ^
+          "\t" ^ "push rax ; push magic to stack \n" ^
+          (applicTP_gen revArgs)
+
+****
 
 
 Helper compile-

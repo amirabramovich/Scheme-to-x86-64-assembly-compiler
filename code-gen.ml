@@ -395,7 +395,6 @@ module Code_Gen : CODE_GEN = struct
           "\n\t" ^ "mov rax, MAGIC ; ApplicTP \n" ^
           "\t" ^ "push rax ; push magic to stack \n" ^
           (applicTP_gen revArgs)
-
       | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;
