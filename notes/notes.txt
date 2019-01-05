@@ -1000,6 +1000,25 @@ lcodeOpt
         "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
 ****
+
+lcode opt
+
+      (* Helper function for Lcode of LamdaOpt' *)
+      let lcodeOpt body curr_count =
+        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^ (* TODO: Implement if necessary, or, remove if un necessary *)
+        ";; adjust stack for opt args \n" ^ (* TODO: implement Lcode of LambdaOpt' (adjust stack for optional arguments) *)
+        "\t" ^ "xor r15, r15 ; clean r15 (=magic) ? \n" ^ 
+        "\t" ^ "push r15 ; push magic ? \n" ^ 
+        "\t" ^ "push rbp\n" ^
+        "\t" ^ "mov rbp, rsp\n" ^
+        (generate consts fvars body) ^ 
+        "\t" ^ "leave\n" ^
+        "\t" ^ "ret\n" ^
+        "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
+
+
+****
+
 ApplicTP' back up
 ****
 
@@ -1072,7 +1091,35 @@ prev applic
           "\t" ^ "push rax ; push magic to stack \n" ^
           (applic_gen args)
 
-          
+
+****
+
+applic tp of amir last commit
+
+
+         let args = List.rev args in
+          let len = List.length args in
+          let rec applic_rec args =
+            match args with
+                | car :: cdr -> 
+                (generate consts fvars car) ^ 
+                "\t" ^ "push rax \n" ^ 
+                applic_rec cdr
+              | [] -> 
+                "\t" ^ "push " ^ (string_of_int len) ^ "\n" ^
+                (generate consts fvars op) ^
+                "\t" ^ "mov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
+                "\t" ^ "push r9 ; push env\n" ^
+                "\t" ^ "push qword [rbp + 8] ; old ret addr\n" ^
+                "\t" ^ "mov r9, qword[rbp]\n" ^
+                "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 4)) ^ "\n" ^
+                "\t" ^ "mov rbp, r9 \n" ^
+                "\t" ^ "jmp [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code \n"
+          in 
+          (* "\t" ^ "mov rax, MAGIC ; applic in tail position \n" ^ *)
+          (* "\t" ^ "push rax \n" ^ *)
+          (applic_rec args)
+
 ****
 
 
