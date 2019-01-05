@@ -29,7 +29,8 @@ module Code_Gen : CODE_GEN = struct
           .2. Finish Implement ApplicTP', and check it.
           .3. check again all tests of box, and fix box if needed.
           .4. Make code more simple and nice (use defines, macros, enums (for example: different enum for MAGIC for each different use), etc).
-              put functions of each similar code, think of the most exact names (funcs, params), try to make smaller number of params and code.
+              Put functions of each similar code, think of the most exact names (funcs, params), try to make smaller number of params and code.
+              Delete (only!) un necessary code, comments, etc (think of clean and exact code).
               Think of this code as going to preset it. (Look at semantic-analyser.ml for example).
           .5. Expand tests and make order in them, use tests of others from facebook (can add to our tests, or just use).
           .6. At the end, remove added (for check only) functions to code-gen.ml signature, and put GB(4) at proloug (at rdi register).
