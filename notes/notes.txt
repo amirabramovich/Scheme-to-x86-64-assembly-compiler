@@ -1039,6 +1039,41 @@ ApplicTP' back up
           (applicTP_gen revArgs)
 
 ****
+prev applic
+
+
+
+      | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
+          let args = List.rev args in
+          let len = List.length args in
+          (* Helper function, generate applic *)
+          let rec applic_gen args =
+            match args with
+              | car :: cdr -> 
+                (generate consts fvars car) ^
+                "\t" ^ "push rax" ^ " ; push arg \n" ^ 
+                applic_gen cdr
+              | [] -> 
+                "\t" ^ "push " ^ (string_of_int len) ^ " ; push number args \n" ^ 
+                "\t" ^ "; start parse op \n" ^
+                (generate consts fvars op) ^
+                "\t" ^ "; finish parse op \n " ^
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE] ; closure's env to rbx \n" ^
+                "\t" ^ "push rbx ; push env (args) to stack (rsp stack pointer) \n" ^
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code to rbx \n" ^
+                "\t" ^ "call rbx ; call code (of closure) \n" ^
+                "\t" ^ "add rsp, 8*1 ; pop env (args) \n" ^ 
+                "\t" ^ "pop rbx ; pop number args \n" ^
+                "\t" ^ "inc rbx ; add magic as param (in counter) for pop \n" ^ 
+                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 (calc size args) \n" ^
+                "\t" ^ "add rsp, rbx ; pop args \n\n" 
+          in
+          "\n\t" ^ "mov rax, MAGIC ; Applic \n" ^
+          "\t" ^ "push rax ; push magic to stack \n" ^
+          (applic_gen args)
+
+          
+****
 
 
 Helper compile-
