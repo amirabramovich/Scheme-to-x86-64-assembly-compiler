@@ -913,3 +913,48 @@ foo.scm
 ; (define g (lambda(x)x))
 ; (define f (lambda(x)(+ x 1)))
 ; ((lambda (x) (f (g (g x))))5)
+
+
+
+*****
+5.1
+
+ LambdaOpt prev
+
+      raise X_not_yet_implemented
+        
+          (* let (curr_count, curr_env) = (!count, !env_count) in
+          count := !count + 1;
+          env_count := !env_count + 1;
+          assemLambda vars body ^ (lcodeOpt body curr_count) *)
+
+
+*****
+
+
+ApplicTP case
+
+prev
+
+          let args = List.rev args in
+          let len = List.length args in
+          let rec applic_rec args =
+            match args with
+              | car :: cdr -> 
+                (generate consts fvars car) ^ 
+                "\tpush rax ;; applic case in generate func\n" ^ 
+                applic_rec cdr
+              | [] -> 
+                "\tpush " ^ (string_of_int len) ^ "\n" ^
+                (generate consts fvars op) ^
+                "\tmov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
+                "\tpush r9 ; push env\n" ^
+                "\tpush qword [rbp + 8] ; old ret addr\n" ^
+                "\tmov r9, qword[rbp]\n" ^
+                "\tSHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
+                "\tmov rbp, r9\n" ^
+                "\tjmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"
+          in
+          "\tmov rax, 9999\n" ^
+          "\tpush rax\n" ^
+          (applic_rec args)

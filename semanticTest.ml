@@ -1097,5 +1097,221 @@ allPassed cyan all_test;;
  
 print grn "END TESTS";;
 
+
+(* Prepare tests for compiler *)
 let c1 = run_semantics (tag_parse_expression (read_sexpr "((lambda (x) (g (g x))) 1)"));;
- 
+let c2 = run_semantics (tag_parse_expression (read_sexpr "((lambda (x) x) 1)"));;
+let c3 = run_semantics (tag_parse_expression (read_sexpr "((lambda (x) (+ x x)) 1)"));;
+let c4 = run_semantics (tag_parse_expression (read_sexpr "((lambda () (+ 1 2) (+ 1 1)))"));;
+let c5 = run_semantics (tag_parse_expression (read_sexpr "(define (func .  x) x)"));;
+let c6 = run_semantics (tag_parse_expression (read_sexpr "(func 3)"));;
+let c7 = run_semantics (tag_parse_expression (read_sexpr "(lambda (a b . c) (+ a b))"));;
+let c8 = run_semantics (tag_parse_expression (read_sexpr "((lambda (a b . c) (+ a b)) 1 2)"));;
+let c9 = run_semantics (tag_parse_expression (read_sexpr "
+(cond (#f 1) 
+    (#f 1 2)
+      (else #t 1 0))"));;
+let c10 = run_semantics (tag_parse_expression (read_sexpr "
+((lambda ()      
+      (begin
+        (+ 1 2)
+      (+ 3 4)
+      (* 1 2))
+        ))"));; 
+let c11 = run_semantics (tag_parse_expression (read_sexpr 
+        "((lambda (x)
+            (boolean? x)) #t)"));;
+let c12 = run_semantics (tag_parse_expression (read_sexpr "
+(((lambda (a b)
+            (begin 1
+            2
+            (lambda () 
+                \"done!\")
+                      )) 0 1))
+                      "));; (* done! *)
+let c13 = (run_semantics (tag_parse_expression (read_sexpr
+                      "(define foo8 (lambda (x y) 
+                                        (cons x ((lambda () 
+                                                  (set! x y)
+                                                  y)
+                                                    ))))")));;
+let c14 = (run_semantics (tag_parse_expression (read_sexpr "
+                                                    ((lambda (x y)
+                                                      (cons x y)) 1 2)
+                                                    ")));;
+let c15 = (run_semantics (tag_parse_expression (read_sexpr "
+                                  (cons 1 (cons 2 3))
+                                                    ")));;
+let c16 = (run_semantics (tag_parse_expression (read_sexpr "
+((lambda () 
+    (and ((lambda() 1)) ((lambda() 2)) ((lambda () 3)))))
+    ")));;
+let c17 = (run_semantics (tag_parse_expression (read_sexpr "
+    (define adder (lambda (x) (lambda (y) (+ x y))))
+    ")));;
+let c18 = (run_semantics (tag_parse_expression (read_sexpr "
+    ((adder 3) 9)
+        ")));;
+let c19 = (run_semantics (tag_parse_expression (read_sexpr "  
+        ((lambda (x y)
+        (if x ((lambda ()
+                (set! y x)
+                y))
+            (lambda (z) (set! x z)))) 1 2)
+            ")));;
+let c20 = (run_semantics (tag_parse_expression (read_sexpr "  
+    ((lambda (x)
+    (begin
+        (lambda (y) 
+        (set! x y) 1)
+        x)
+        ) 1)
+            ")));;
+let c21 = (run_semantics (tag_parse_expression (read_sexpr "  
+            (+
+    ((lambda (x)
+            (set! x 2)
+            x) 1)
+    ((lambda (x) x) 2))
+    ")));;
+(* Box VarBound *)
+let c22 = (run_semantics (tag_parse_expression (read_sexpr "  
+((lambda (x)
+        (+
+        ((lambda ()
+            (begin
+            (set! x 2)
+            (+ 2 2)
+            )
+            ))
+            ((lambda (y)
+                x) 0)
+            )
+            ) 2) 
+            ")));;
+(* no set *)
+let c23 = (run_semantics (tag_parse_expression (read_sexpr "  
+            ((lambda (x)
+            (+
+                ((lambda ()
+                    (begin
+                        4)
+                            ))
+                ((lambda ()
+                    x))
+                        )
+                            ) 2) 
+                            ")));;
+(* Set VarBound, no Box *)
+let c24 = (run_semantics (tag_parse_expression (read_sexpr "    
+                            ((lambda (x)
+    (+
+        ((lambda ()
+            (begin
+                (set! x 2)
+                4)
+                    ))
+        ((lambda ()
+            2))
+                )
+                    ) 2)
+                    ")));;
+let c25 = (run_semantics (tag_parse_expression (read_sexpr " 
+  ((lambda (x)
+    (lambda ()
+        (set! x 3))
+    (if x #f #t)
+            x) 1) 
+            ")));;
+let c26 = (run_semantics (tag_parse_expression (read_sexpr " 
+            ((lambda (x)
+    (+
+        ((lambda ()
+            (begin
+                (set! x 2)
+                4)
+                    ))
+        ((lambda ()
+            2))
+                )
+                    ) 2)
+                    ")));;
+let c27 = (run_semantics (tag_parse_expression (read_sexpr "  
+  ((lambda (x)
+    (set! x 3)
+    x
+        ) 1)
+        ")));;
+let c28 = (run_semantics (tag_parse_expression (read_sexpr "  
+  ((lambda (x)
+    (lambda ()
+        (set! x 3))
+    x
+        ) 1)
+        ")));;
+let c29 = (run_semantics (tag_parse_expression (read_sexpr "  
+        ((lambda (x)
+          (set! x 3)
+          ((lambda ()
+              x))
+                ) 1)
+                ")));;
+let c30 = (run_semantics (tag_parse_expression (read_sexpr "    
+((lambda (x)
+    (lambda ()
+        (set! x 3))
+    (if x #f #t)
+            x) 1) 
+            ")));;
+let c31 = (run_semantics (tag_parse_expression (read_sexpr "    
+  ((lambda (x)
+    (set! x 4)
+    ((lambda ()
+        x))
+       ) 1)
+       ")));;
+let c32 = (run_semantics (tag_parse_expression (read_sexpr "
+       ((lambda (x)
+    ((lambda ()
+        (set! x 2)))
+    x
+        ) 1) 
+        ")));;
+let c33 = (run_semantics (tag_parse_expression (read_sexpr "
+        ((lambda (x)
+    ((lambda ()
+        (set! x 2)
+        x))
+        ) 1)
+        ")));;
+let c34 = (run_semantics (tag_parse_expression (read_sexpr "
+        ((lambda (x)
+        (+
+            ((lambda ()
+                (begin
+                    (set! x 2)
+                    0)
+                        ))
+            ((lambda ()
+                1))
+                    )
+                        ) 2)
+                        ")));;
+let c35 = (run_semantics (tag_parse_expression (read_sexpr "  
+  ((lambda (x)
+    ((lambda()
+        (set! x 3)))
+    ((lambda()
+        x))
+        ) 1)
+        ")));;
+let c36 = (run_semantics (tag_parse_expression (read_sexpr "  
+    (define (func .  x) x)
+    ")));;
+let c37 = (run_semantics (tag_parse_expression (read_sexpr "
+  (lambda (a . b) 1)
+        ")));;
+let c38 = (run_semantics (tag_parse_expression (read_sexpr "
+        ((lambda (x)
+            (boolean? x)) #t)
+            ")));;

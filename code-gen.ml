@@ -25,18 +25,19 @@ module Code_Gen : CODE_GEN = struct
   (* Helper function, scan AST & collect const sexprs, return sexprs list *)
   let rec scan_ast asts consts = 
     match asts with
-      | car :: cdr -> (match car with
-                        | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
-                        | Var' (VarFree str) -> scan_ast cdr ([String str] @ consts) (* Add support for Var' *)
-                        | Var' (VarParam (str, pos)) -> scan_ast cdr ([String str] @ consts)
-                        | Var' (VarBound (str, depth, pos)) -> scan_ast cdr ([String str] @ consts)
-                        | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
-                        | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test] @ [dit] @ [dif]) consts) 
-                        | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
-                        | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) | BoxSet' (_, body) -> 
-                            scan_ast cdr consts @ (scan_ast [body] consts) (* Add support for LambdaOpt' & BoxSet' *)
-                        | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
-                        | _ -> scan_ast cdr consts)
+      | car :: cdr -> 
+         (match car with
+              | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
+              | Var' (VarFree str) -> scan_ast cdr ([String str] @ consts) (* Add support for Var' *)
+              | Var' (VarParam (str, pos)) -> scan_ast cdr ([String str] @ consts)
+              | Var' (VarBound (str, depth, pos)) -> scan_ast cdr ([String str] @ consts)
+              | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
+              | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test] @ [dit] @ [dif]) consts) 
+              | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
+              | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) | BoxSet' (_, body) -> 
+                  scan_ast cdr consts @ (scan_ast [body] consts) (* Add support for LambdaOpt' & BoxSet' *)
+              | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
+              | _ -> scan_ast cdr consts)
       | _ -> consts ;;
 
   let scan_ast asts = scan_ast asts [] ;;
@@ -81,7 +82,7 @@ module Code_Gen : CODE_GEN = struct
 
   (* Helper func for parse vec to tbl, got vec and tbl => return string of consts + addr of all elems in vec *)
   let vec_const vec tbl = 
-    let lst_string = List.map (fun s -> "const_tbl+" ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
+    let lst_string = List.map (fun s -> "const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
     String.concat ", " lst_string;;
 
   (* Helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
@@ -104,7 +105,7 @@ module Code_Gen : CODE_GEN = struct
             cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl + " ^ 
               string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car) 
         | Pair (f, s) -> 
-            cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl+" ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ 
+            cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl + " ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ 
               ", const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car)
         | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec tbl ^ " ; my address is " ^ 
             (string_of_int addr))]) (addr + size_of car))
@@ -154,8 +155,10 @@ module Code_Gen : CODE_GEN = struct
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
      "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons"
      ];;
-     (* TODO: implement append (variadic), apply (variadic), equal?, length, list (variadic), 
-     map (variadic), not, number?, zero? *)
+     (* TODO:
+        implement append (variadic), apply (variadic), equal?, length, list (variadic), 
+        map (variadic), not, number?, zero?
+     *)
 
   let first (x, y) = x;;
 
@@ -181,11 +184,24 @@ module Code_Gen : CODE_GEN = struct
         prev_args := List.length vars;
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
-        "\t" ^ "mov rbp , rsp ; parse of lambdaSimple body below:\n" ^
+        "\t" ^ "mov rbp , rsp ; parse of lambdaSimple body below: \n" ^
         (generate consts fvars body) ^ 
-        "\t" ^ "leave ; done parsing lambdaSimple body above\n" ^
+        "\t" ^ "leave ; done parsing lambdaSimple body above \n" ^
         "\t" ^ "ret\n" ^
         "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
+
+      (* Helper function for Lcode of LamdaOpt' *)
+      let lcodeOpt body curr_count =
+        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^ (* TODO: Implement if necessary, or, remove if un necessary *)
+        ";; adjust stack for opt args \n" ^ (* TODO: implement Lcode of LambdaOpt' (adjust stack for optional arguments) *)
+        "\t" ^ "xor r15, r15 ; clean r15 (=magic) ? \n" ^ 
+        "\t" ^ "push r15 ; push magic ? \n" ^ 
+        "\t" ^ "push rbp\n" ^
+        "\t" ^ "mov rbp, rsp\n" ^
+        (generate consts fvars body) ^ 
+        "\t" ^ "leave\n" ^
+        "\t" ^ "ret\n" ^
+        "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
       (* Helper function, for generate Lambda *)
       let assemLambda vars body curr_count curr_env len =
