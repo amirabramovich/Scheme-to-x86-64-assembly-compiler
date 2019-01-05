@@ -172,7 +172,9 @@ try
   let provided_primitives = file_to_string "prims.s" in
                    
   print_string ((make_prologue consts_tbl fvars_tbl)  ^
-                  code_fragment ^ "\tadd rsp, 4*8\n\tpop rbp\n\tret\n\n" ^
+                  code_fragment ^ "\t" ^ "add rsp, 4*8 \n" ^ 
+                                  "\t" ^ "pop rbp \n" ^
+                                  "\t" ^ "ret \n\n" ^
                     provided_primitives ^ "\n" ^ epilogue)
 
 with Invalid_argument(x) -> raise X_missing_input_file;;

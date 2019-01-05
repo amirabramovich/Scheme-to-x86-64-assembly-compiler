@@ -210,19 +210,6 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "ret\n" ^
         "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
-      (* Helper function for Lcode of LamdaOpt' *)
-      let lcodeOpt body curr_count =
-        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^ (* TODO: Implement if necessary, or, remove if un necessary *)
-        ";; adjust stack for opt args \n" ^ (* TODO: implement Lcode of LambdaOpt' (adjust stack for optional arguments) *)
-        "\t" ^ "xor r15, r15 ; clean r15 (=magic) ? \n" ^ 
-        "\t" ^ "push r15 ; push magic ? \n" ^ 
-        "\t" ^ "push rbp\n" ^
-        "\t" ^ "mov rbp, rsp\n" ^
-        (generate consts fvars body) ^ 
-        "\t" ^ "leave\n" ^
-        "\t" ^ "ret\n" ^
-        "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
-
       (* Helper function, for generate Lambda *)
       let assemLambda vars body curr_count curr_env =
         let len = !args_count in
@@ -288,6 +275,7 @@ module Code_Gen : CODE_GEN = struct
                                                   "\t" ^ "mov rbx, BVARX(" ^ (string_of_int depth)^ ")" ^  "\n" ^
                                                   "\t" ^ "mov BVARX(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
                                                   "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+      (* TODO: Implement Box with MALLOC *)
       | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; VarParam, BoxGet' \n" (* fix bug here *)
                                    (* ^ "\t" ^ "mov rax, qword[rax] \n" *)
       | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; VarBound, BoxGet' \n" ^ (* works *)
@@ -336,7 +324,7 @@ module Code_Gen : CODE_GEN = struct
           args_count := !args_count + (List.length vars); 
           let out = "\n" ^ (assemLambda vars body curr_count curr_env) ^ (lcodeSimple body curr_count) in
           env_count := !env_count - 1; args_count := !args_count - (List.length vars); out
-      (* TODO: fix LambdaOpt' case *)
+      (* TODO: check more cases of LambdaOpt', and fix if needed *)
       | LambdaOpt'(vars, opt, body) ->
           let vars = vars @ [opt] in
           let (curr_count, curr_env) = (!count, !env_count) in
@@ -345,7 +333,7 @@ module Code_Gen : CODE_GEN = struct
           args_count := !args_count + (List.length vars); 
           let out = "\n" ^ (assemLambda vars body curr_count curr_env) ^ (lcodeSimple body curr_count) in
           env_count := !env_count - 1; args_count := !args_count - (List.length vars); out
-      | Applic'(op, args) | ApplicTP'(op, args) -> 
+      | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
           let args = List.rev args in
           let len = List.length args in
           (* Helper function, generate applic *)
@@ -353,72 +341,60 @@ module Code_Gen : CODE_GEN = struct
             match args with
               | car :: cdr -> 
                 (generate consts fvars car) ^
-                "\t" ^ "push rax" ^ " ; Applic \n" ^ 
+                "\t" ^ "push rax" ^ " ; push arg \n" ^ 
                 applic_gen cdr
               | [] -> 
-                "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below \n"^
+                "\t" ^ "push " ^ (string_of_int len) ^ " ; push number args \n" ^ 
+                "\t" ^ "; start parse op \n" ^
                 (generate consts fvars op) ^
-                "\t" ^ "mov rbx, [rax + TYPE_SIZE] ; closure's env \n" ^
-                "\t" ^ "push rbx ; push env \n" ^
-                "\t" ^ "mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code \n" ^
-                "\t" ^ "call rbx ; call code \n" ^
-                "\t" ^ "add rsp, 8*1 ; pop env \n" ^ 
-                "\t" ^ "pop rbx ; pop arg count \n" ^
-                "\t" ^ "inc rbx \n" ^ 
-                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 \n"^
-                "\t" ^ "add rsp, rbx ; pop args \n" 
+                "\t" ^ "; finish parse op \n " ^
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE] ; closure's env to rbx \n" ^
+                "\t" ^ "push rbx ; push env (args) to stack (rsp stack pointer) \n" ^
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code to rbx \n" ^
+                "\t" ^ "call rbx ; call code (of closure) \n" ^
+                "\t" ^ "add rsp, 8*1 ; pop env (args) \n" ^ 
+                "\t" ^ "pop rbx ; pop number args \n" ^
+                "\t" ^ "inc rbx ; add magic as param (in counter) for pop \n" ^ 
+                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 (calc size args) \n" ^
+                "\t" ^ "add rsp, rbx ; pop args \n\n" 
           in
-          "\n\t" ^ "mov rax, 6666 ; begin applic \n" ^
-          "\t" ^ "push rax \n" ^
+          "\n\t" ^ "mov rax, MAGIC ; Applic \n" ^
+          "\t" ^ "push rax ; push magic to stack \n" ^
           (applic_gen args)
-      | ApplicTP'(op, args) -> 
-          let currIdx = !count in (* Add currIdx for sign Labels *)
-          count := !count + 1;
-          let args = List.rev args in
-          let len = List.length args in
-          (* Helper function, generate applic *)
-          let rec applic_gen args =
+      | ApplicTP'(op, args) ->
+          let revArgs = List.rev args in
+          let numArgs = List.length args in
+          (* Helper function, generate applic, in tail position *)
+          let rec applicTP_gen args =
             match args with
               | car :: cdr -> 
                 (generate consts fvars car) ^
-                "\t" ^ "push rax" ^ " ; ApplicTP \n" ^ 
-                applic_gen cdr
+                "\t" ^ "push rax" ^ " ; push arg \n" ^
+                applicTP_gen cdr
               | [] -> 
-                "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below \n"^
+                "\t" ^ "push " ^ (string_of_int numArgs) ^ "; push number args \n" ^
+                "\t" ^ "; start parse op \n" ^
                 (generate consts fvars op) ^
+                "\t" ^ "; finish parse op \n" ^
                 "\t" ^ "mov rbx, [rax + TYPE_SIZE] ; closure's env \n" ^
-                "\t" ^ "push rbx ; push env \n" ^
-                 
+                "\t" ^ "push rbx ; push env (args) \n" ^
                 (* Add code for ApplicTP' (Logic of code is from Lecture #5, pages 44-46) *)
-                "\t" ^ "push qword[rbp + 8*1] ; old ret addr \n" ^
-                "\t" ^ "mov rsp, rbp ; restore the old frame pointer register \n" ^
-                "\t" ^ "mov r9, " ^ (string_of_int len) ^ " ; r9 is loop idx \n" ^
-                "\t" ^ "mov r10, rsp ; old frame pointer \n" ^
-                "\t" ^ "mov r12, rbx ; current env \n" ^
-                (* OverWrite Old frame *)
-                "\t" ^ ".overwrite_frame" ^ (string_of_int currIdx) ^ ":\n" ^
-                "\t\t" ^ "cmp r9, 0 \n" ^ 
-                "\t\t" ^ "jz .finish_overwrite_frame" ^ (string_of_int currIdx) ^ "\n" ^
-                "\t\t" ^ "dec r9 ; dec loop idx \n" ^
-                "\t\t" ^ "mov r11, qword[r10] ; old frame location \n" ^
-                "\t\t" ^ "mov r11, r12 ; put current env, into old frame \n" ^
-                "\t\t" ^ "add r10, WORD_SIZE ; inc r10 to the next location in old env \n" ^
-                "\t\t" ^ "add r12, WORD_SIZE ; inc r12 to the next location in curr env \n" ^
-                "\t\t" ^ "jmp .overwrite_frame" ^ (string_of_int currIdx) ^ "\n" ^
-
-                (* Finish OverWrite Old frame (same as Applic') *)
-                "\t" ^ ".finish_overwrite_frame" ^ (string_of_int currIdx) ^ ":\n" ^
+                "\t" ^ "push qword[rbp + 8*1] ; push old ret addr \n" ^ 
+                "\t" ^ "mov rsp, rbp ; restore old frame ptr register \n" ^
+                (* Fix the stack *)
+                "\t" ^ "SHIFT_FRAME " ^ (string_of_int (numArgs + 5)) ^ " ; shift frame, where frame size is " ^ (string_of_int (numArgs + 5)) ^ "\n" ^
+                (generate consts fvars op) ^ (* parse op again, for closure code *)
                 "\t" ^ "mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code \n" ^
-                "\t" ^ "call rbx ; call code \n" ^
-                "\t" ^ "add rsp, 8*1 ; pop env \n" ^ 
-                "\t" ^ "pop rbx ; pop arg count \n" ^
-                "\t" ^ "inc rbx \n" ^ 
-                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 \n" ^
+                "\t" ^ "jmp rbx ; jmp to code (closure) \n" ^ (* change call to jmp *)
+                "\t" ^ "add rsp, 8*1 ; pop env (args) \n" ^ 
+                "\t" ^ "pop rbx ; pop number args \n" ^
+                "\t" ^ "inc rbx ; add magic as param (for pop) \n" ^ 
+                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 (calc size args) \n" ^
                 "\t" ^ "add rsp, rbx ; pop args \n" 
           in
-          "\n\t" ^ "mov rax, 6666 ; begin applicTP \n" ^
-          "\t" ^ "push rax \n" ^
-          (applic_gen args)
+          "\n\t" ^ "mov rax, MAGIC ; ApplicTP \n" ^
+          "\t" ^ "push rax ; push magic to stack \n" ^
+          (applicTP_gen revArgs)
 
       | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 

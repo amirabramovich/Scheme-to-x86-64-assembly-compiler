@@ -958,3 +958,89 @@ prev
           "\tmov rax, 9999\n" ^
           "\tpush rax\n" ^
           (applic_rec args)
+
+
+
+***
+prev ApplicTP
+
+
+                (* "\t" ^ "mov rsp, rbp ; restore old frame ptr register \n" ^
+                "\t" ^ "mov r9, " ^ (string_of_int numArgs) ^ " ; loop idx (init to num args) \n" ^
+                "\t" ^ "mov r10, rsp ; old frame ptr \n" ^
+                "\t" ^ "mov r12, rbx ; curr env \n\n" ^
+                "\t" ^ ".overwrite_frame" ^ (string_of_int currIdx) ^ ":\n" ^
+                "\t\t" ^ "cmp r9, 0 ; cmp idx \n" ^ 
+                "\t\t" ^ "jz .finish_overwrite_frame" ^ (string_of_int currIdx) ^ "\n" ^
+                "\t\t" ^ "dec r9 ; dec loop idx \n" ^
+                "\t\t" ^ "mov r11, qword[r10] ; old frame loc \n" ^
+                "\t\t" ^ "mov r11, r12 ; old frame loc got curr env \n" ^
+                "\t\t" ^ "add r10, WORD_SIZE ; inc old frame ptr \n" ^
+                "\t\t" ^ "add r12, WORD_SIZE ; inc curr env \n" ^
+                "\t\t" ^ "jmp .overwrite_frame" ^ (string_of_int currIdx) ^ " ; back to loop " ^ (string_of_int currIdx) ^ "\n\n" ^
+                "\t" ^ ".finish_overwrite_frame" ^ (string_of_int currIdx) ^ ":\n" ^ *)
+
+
+
+***
+***
+lcodeOpt
+
+      (* Helper function for Lcode of LamdaOpt' *)
+      let lcodeOpt body curr_count =
+        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^ (* TODO: Implement if necessary, or, remove if un necessary *)
+        ";; adjust stack for opt args \n" ^ (* TODO: implement Lcode of LambdaOpt' (adjust stack for optional arguments) *)
+        "\t" ^ "xor r15, r15 ; clean r15 (=magic) ? \n" ^ 
+        "\t" ^ "push r15 ; push magic ? \n" ^ 
+        "\t" ^ "push rbp\n" ^
+        "\t" ^ "mov rbp, rsp\n" ^
+        (generate consts fvars body) ^ 
+        "\t" ^ "leave\n" ^
+        "\t" ^ "ret\n" ^
+        "\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
+
+****
+
+
+Helper compile-
+
+ocaml compiler.ml compilerTest.scm > compilerTest.s
+nasm -felf64 -o compilerTest.o compilerTest.s
+gcc -m64 -static -o compilerTest compilerTest.o
+
+
+***
+Helper debug-
+          
+set script-extension soft
+set disassembly-flavor intel
+set tui border-kind acs
+layout asm
+tui enable
+tui reg general
+
+
+display registers while debbuging-
+x/nxg register/address
+x/12xg $rsp
+
+
+***
+before ret instruction-
+
+
+wit shift_frame-
+rsp before ret is-
+0x0000000000401268 in Lcode0 ()
+(gdb) x $rsp
+0x7fffffffdb50: 0x00000000006cb5b7
+(gdb) p $rsp
+$17 = (void *) 0x7fffffffdb50
+
+
+without shift_frame-
+rsp before ret is-
+(gdb) x $rsp
+0x7fffffffdb50: 0x0040121f
+(gdb) p $rsp
+$1 = (void *) 0x7fffffffdb50

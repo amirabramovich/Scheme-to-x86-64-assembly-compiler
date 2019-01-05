@@ -1315,3 +1315,14 @@ let c38 = (run_semantics (tag_parse_expression (read_sexpr "
         ((lambda (x)
             (boolean? x)) #t)
             ")));;
+let c39 = (run_semantics (tag_parse_expression (read_sexpr "
+((lambda () (+ 1 2)))
+")));;
+let c40 = (run_semantics (tag_parse_expression (read_sexpr "
+((lambda ()      
+      (begin
+        (+ 1 2)
+      (+ 3 4)
+      (* 1 2))
+        ))
+        ")));;
