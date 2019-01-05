@@ -212,9 +212,9 @@ module Code_Gen : CODE_GEN = struct
 
       (* Helper function for Lcode of LamdaOpt' *)
       let lcodeOpt body curr_count =
-        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
+        "\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^ (* TODO: Implement if necessary, or, remove if un necessary *)
         ";; adjust stack for opt args \n" ^ (* TODO: implement Lcode of LambdaOpt' (adjust stack for optional arguments) *)
-        "\t" ^ "xor r15, r15 ; clean r15 (=magic) ? \n" ^
+        "\t" ^ "xor r15, r15 ; clean r15 (=magic) ? \n" ^ 
         "\t" ^ "push r15 ; push magic ? \n" ^ 
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp, rsp\n" ^
