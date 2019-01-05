@@ -1308,6 +1308,10 @@ let c35 = (run_semantics (tag_parse_expression (read_sexpr "
 let c36 = (run_semantics (tag_parse_expression (read_sexpr "  
     (define (func .  x) x)
     ")));;
-let c36 = (run_semantics (tag_parse_expression (read_sexpr "
+let c37 = (run_semantics (tag_parse_expression (read_sexpr "
   (lambda (a . b) 1)
         ")));;
+let c38 = (run_semantics (tag_parse_expression (read_sexpr "
+        ((lambda (x)
+            (boolean? x)) #t)
+            ")));;

@@ -189,22 +189,24 @@ y ; (0 . 1)
 
 
 ;; ApplicTP
-"ApplicTP"
-((lambda (x)
-            (boolean? x)) #t) ; #t
-((lambda (x y)
-        (cons x y)) 1 2) ; (1 . 2)
-((lambda () 
-    (and ((lambda() 1)) ((lambda() 2)) ((lambda () 3))))) ; 3
-(define adder (lambda (x) (lambda (y) (+ x y))))
-((adder 3) 9) ; 12
+;; "ApplicTP"
+;; ((lambda (x)
+;;             (boolean? x)) #t) ; #t
+;; ((lambda (x y)
+;;         (cons x y)) 1 2) ; (1 . 2)
+;; ((lambda () 
+;;     (and ((lambda() 1)) ((lambda() 2)) ((lambda () 3))))) ; 3
+;; (define adder (lambda (x) (lambda (y) (+ x y))))
+;; ((adder 3) 9) ; 12
 ;; (define foo (lambda (x y) 
 ;;             (cons x ((lambda () 
 ;;                         (set! x y)
 ;;                         y)
 ;;                         ))))
 ;; (foo 0 1) ; (0 . 1), Failed
-"----------------------"
+
+;; TODO: add more complicated cases of ApplicTP', and fix if needed
+;; "----------------------"
 
 
 ;;Box

@@ -17,16 +17,25 @@ end;;
 
 module Code_Gen : CODE_GEN = struct
 
-  (* Update 5.1, 1:05
+  (* Update 5.1, 3:41
         Done:
           .1. Fix bugs in Box
           .2. Add more tests
           .3. A bit order in tests & code
+          .4. Try Implement ApplicTP'
 
         TODO:
-          .1. Implement LambdaOpt', and check it
-          .2. Implement ApplicTP', and check it
-          .3. check again all tests of box, and fix box if needed
+          .1. Check more cases of LambdaOpt', and fix if needed.
+          .2. Finish Implement ApplicTP', and check it.
+          .3. check again all tests of box, and fix box if needed.
+          .4. Make code more simple and nice (use defines, macros, enums (for example: different enum for MAGIC for each different use), etc).
+              put functions of each similar code, think of the most exact names (funcs, params), try to make smaller number of params and code.
+              Think of this code as going to preset it. (Look at semantic-analyser.ml for example).
+          .5. Expand tests and make order in them, use tests of others from facebook (can add to our tests, or just use).
+          .6. At the end, remove added (for check only) functions to code-gen.ml signature, and put GB(4) at proloug (at rdi register).
+          .7. Implement apply assembly function, and check it.
+          .8. Go to the rest of files (compiler.ml, compiler.s, prims.s, stdlib.scm) and think what need to implement or improve.
+          .9. Prepare for submit: think (and know) which files exactly should be on the final patch.
   *)
 
   let count = (ref 0);;
@@ -361,30 +370,55 @@ module Code_Gen : CODE_GEN = struct
           "\n\t" ^ "mov rax, 6666 ; begin applic \n" ^
           "\t" ^ "push rax \n" ^
           (applic_gen args)
-      (* TODO: fix ApplicTP' case *)
       | ApplicTP'(op, args) -> 
+          let currIdx = !count in (* Add currIdx for sign Labels *)
+          count := !count + 1;
           let args = List.rev args in
           let len = List.length args in
-          let rec applic_rec args =
+          (* Helper function, generate applic *)
+          let rec applic_gen args =
             match args with
               | car :: cdr -> 
-                (generate consts fvars car) ^ 
-                "\tpush rax ;; applic case in generate func\n" ^ 
-                applic_rec cdr
+                (generate consts fvars car) ^
+                "\t" ^ "push rax" ^ " ; ApplicTP \n" ^ 
+                applic_gen cdr
               | [] -> 
-                "\tpush "^(string_of_int len)^"\n"^
-                (generate consts fvars op)^
-                "\tmov r9, [rax+TYPE_SIZE] ; closure's env\n"^
-                "\tpush r9 ; push env\n"^
-                "\tpush qword [rbp + 8] ; old ret addr\n"^
-                "\tmov r9, qword[rbp]\n"^
-                "\tSHIFT_FRAME "^(string_of_int (len+5))^"\n"^
-                "\tmov rbp, r9\n"^
-                "\tjmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"
+                "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below \n"^
+                (generate consts fvars op) ^
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE] ; closure's env \n" ^
+                "\t" ^ "push rbx ; push env \n" ^
+                 
+                (* Add code for ApplicTP' (Logic of code is from Lecture #5, pages 44-46) *)
+                "\t" ^ "push qword[rbp + 8*1] ; old ret addr \n" ^
+                "\t" ^ "mov rsp, rbp ; restore the old frame pointer register \n" ^
+                "\t" ^ "mov r9, " ^ (string_of_int len) ^ " ; r9 is loop idx \n" ^
+                "\t" ^ "mov r10, rsp ; old frame pointer \n" ^
+                "\t" ^ "mov r12, rbx ; current env \n" ^
+                (* OverWrite Old frame *)
+                "\t" ^ ".overwrite_frame" ^ (string_of_int currIdx) ^ ":\n" ^
+                "\t\t" ^ "cmp r9, 0 \n" ^ 
+                "\t\t" ^ "jz .finish_overwrite_frame" ^ (string_of_int currIdx) ^ "\n" ^
+                "\t\t" ^ "dec r9 ; dec loop idx \n" ^
+                "\t\t" ^ "mov r11, qword[r10] ; old frame location \n" ^
+                "\t\t" ^ "mov r11, r12 ; put current env, into old frame \n" ^
+                "\t\t" ^ "add r10, WORD_SIZE ; inc r10 to the next location in old env \n" ^
+                "\t\t" ^ "add r12, WORD_SIZE ; inc r12 to the next location in curr env \n" ^
+                "\t\t" ^ "jmp .overwrite_frame" ^ (string_of_int currIdx) ^ "\n" ^
+
+                (* Finish OverWrite Old frame (same as Applic') *)
+                "\t" ^ ".finish_overwrite_frame" ^ (string_of_int currIdx) ^ ":\n" ^
+                "\t" ^ "mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code \n" ^
+                "\t" ^ "call rbx ; call code \n" ^
+                "\t" ^ "add rsp, 8*1 ; pop env \n" ^ 
+                "\t" ^ "pop rbx ; pop arg count \n" ^
+                "\t" ^ "inc rbx \n" ^ 
+                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 \n" ^
+                "\t" ^ "add rsp, rbx ; pop args \n" 
           in
-          "\tmov rax, 9999\n"^
-          "\tpush rax\n"^
-          (applic_rec args)
+          "\n\t" ^ "mov rax, 6666 ; begin applicTP \n" ^
+          "\t" ^ "push rax \n" ^
+          (applic_gen args)
+
       | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;
