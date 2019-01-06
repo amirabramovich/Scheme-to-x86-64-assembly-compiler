@@ -191,13 +191,15 @@ dq %1
 	sub %1, WORD_SIZE+TYPE_SIZE
 %endmacro
 
-%macro MAKE_LITERAL_STRING 1
+%macro MAKE_LITERAL_STRING 0-*
 db T_STRING
-dq (%%end_str - %%str)
-%%str:
+dq %0
+%rep %0
 db %1
-%%end_str:
+%rotate 1
+%endrep
 %endmacro
+
 
 ; Create a vector of length %2
 ; from SOB at %3.

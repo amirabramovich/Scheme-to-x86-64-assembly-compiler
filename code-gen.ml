@@ -86,15 +86,20 @@ module Code_Gen : CODE_GEN = struct
     let lst_string = List.map (fun s -> "const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
     String.concat ", " lst_string;;
 
+  let str_const str tbl = 
+    let str = string_to_list str in
+    let lst_string = List.map (fun ch -> string_of_int (Char.code ch)) str in
+    String.concat ", " lst_string;; 
+
   (* Helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
   let rec cons_tbl consts tbl addr =
     match consts with
     | car :: cdr -> 
       (match car with
         | Bool _ | Nil -> cons_tbl cdr tbl addr
-        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR('" ^ String.make 1 ch ^ "') ; my address is " ^ 
+        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ string_of_int (Char.code ch) ^ ") ; my address is " ^ 
             (string_of_int addr)))]) (addr + size_of car)
-        | String expr -> cons_tbl cdr (tbl @ [(Sexpr(String expr), (addr, "MAKE_LITERAL_STRING \"" ^ expr ^ "\" ; my address is " ^ 
+        | String str -> cons_tbl cdr (tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str tbl ^ " ; my address is " ^ 
             (string_of_int addr)))]) (addr + size_of car)
         | Number(Int num) ->
             cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
