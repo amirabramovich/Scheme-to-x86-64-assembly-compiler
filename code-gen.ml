@@ -228,8 +228,6 @@ module Code_Gen : CODE_GEN = struct
       (* Helper function for Lcode of LambdaOpt *)
       let lcodeOpt vars opt body curr_count = 
         prev_args := List.length vars;
-        let current = !count in
-        count := !count + 1;
         let len = List.length vars in
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
@@ -242,18 +240,19 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "mov r12, rcx\n" ^
         "\t" ^ "add r12, 0\n" ^
         "\t" ^ "mov r9, const_tbl + 1 ; Nil element\n" ^
-        "\t" ^ ".create_opt_list" ^ (string_of_int current) ^ ":\n" ^
-        "\t\t" ^ "cmp r12, -1\n" ^ 
-        "\t\t" ^ "je .done_create_opt_list" ^ (string_of_int current) ^ "\n" ^
+        "\t" ^ ".create_opt_list: \n" ^
+        "\t\t" ^ "cmp r12, 0\n" ^ 
+        "\t\t" ^ "je .done_create_opt_list \n" ^
         "\t\t" ^ "mov r8, PVAR(r12)\n" ^
         "\t\t" ^ "dec r12\n" ^ 
         "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ;;; List of Opt args, into rax\n" ^
         "\t\t" ^ "mov r9, rax\n" ^
-        "\t\t" ^ "jmp .create_opt_list" ^ (string_of_int current) ^ "\n" ^
-        "\t." ^ "done_create_opt_list" ^ (string_of_int current) ^ ":\n" ^
+        "\t\t" ^ "jmp .create_opt_list \n" ^
+        "\t" ^ ".done_create_opt_list: \n" ^
+        "\t" ^ "mov rax, r9 ;; if bo params, so, rax will got r9, that is originally, nil \n" ^
         "\t" ^ ";;; Put list (rax) in last param location\n" ^
         "\t" ^ "mov r10, rbp\n" ^
-        "\t" ^ "add r13, 0\n" ^
+        "\t" ^ "add r13, 0 \n" ^
         "\t" ^ "shl r13, 3 \n" ^
         "\t" ^ "add r10, r13\n" ^
         "\t" ^ "add r10, 8 * 4 \n" ^

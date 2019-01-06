@@ -287,13 +287,21 @@
 
 ;; ((lambda y y) 1) ; (1)
 
-((lambda y y)) ; ()
+;; ((lambda y y)) ; ()
 
 ;; ((lambda y y)'()) ; (())
 
 ;; ((lambda (a . c)
-;;     c) 1) ; ()
+;;     c) 1 2 3) ; (2 3)
+
 ;; ((lambda (a . c)
 ;;         c) 1) ; ()
+
 ;; ((lambda (a . c)
-;;     c) 1 2 3 4 5) ; (2 3)
+;;     c) 1 2 3 4 5) ; (2 3 4 5)
+
+
+(define voo (lambda (x . y) (begin x y)))
+(voo 1) ; ()
+(voo 1 2) ; (2)
+(voo 1 2 3) ;(2 3)

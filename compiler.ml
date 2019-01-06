@@ -1,4 +1,3 @@
-#use "semantic-analyser.ml";;
 #use "code-gen.ml";;
 
 
