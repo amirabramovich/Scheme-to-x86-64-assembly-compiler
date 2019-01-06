@@ -285,15 +285,15 @@
 ;; ;; .2. find way to concat all tests of each type together, and all tests together (list & equal? not supported yet).
 
 
-;; ((lambda y y) 1) ; 1
+;; ((lambda y y) 1) ; (1)
 
 ;; ((lambda y y)) ; ()
 
-((lambda y y)'()) ; (())
+;; ((lambda y y)'()) ; (())
 
 ;; ((lambda (a . c)
 ;;     c) 1) ; ()
 ;; ((lambda (a . c)
 ;;         c) 1 2) ; (2)
 ;; ((lambda (a . c)
-;;     c) 1 2 3) ; (2 3)
+;;     c) 1 2 3 4 5) ; (2 3)

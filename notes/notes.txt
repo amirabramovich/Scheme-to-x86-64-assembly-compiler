@@ -1122,6 +1122,142 @@ applic tp of amir last commit
 
 ****
 
+prev applic
+
+(* "\t" ^ ";; update 6.1" ^ "\n" ^
+      "\t" ^ "mov rdi, " ^ (string_of_int len) ^ " ; store num args in rdi \n" ^
+      "\t" ^ "sub rdi, rsi ; rdi = num args - num params = length of opt list \n" ^
+      
+      "\t" ^ "add rsp, 8" ^ " ; got stack ptr \n" ^
+      "\t" ^ "mov rcx, MAGIC ; default case, for push magic as arg, if | opt list | = 0, and the list should be empyu \n" ^
+      "\n\t" ^ ".create_opt_list" ^ (string_of_int current) ^ ":\n" ^
+      "\t\t" ^ "cmp rdi, 0 ; loop |opt list| times \n" ^
+      "\t\t" ^ "je .done_create_opt_list" ^ (string_of_int current) ^ "\n" ^
+      "\t\t" ^ "pop rbx" ^ " ; get the last arg \n" ^ 
+      "\t\t" ^ "mov rdx, qword[rbx] ; get last arg \n" ^
+      "\t\t" ^ "mov esi, SOB_NIL_ADDRESS ; init to SOB_NIL_ADDRESS, second element to make_pair \n" ^
+      "\t\t" ^ "MAKE_PAIR(rcx, rdx, esi) ; rcx store ptr for new pair, rdx is curr arg \n" ^
+      "\t\t" ^ "mov esi, rcx ; now esi is new pair (in next iteration, second element to make_pair) \n" ^
+      "\t\t" ^ "dec rdi ; dec loop idx \n" ^
+      "\t\t" ^ "jmp .create_opt_list" ^ (string_of_int current) ^ "\n" ^
+
+      "\n\t" ^ ".done_create_opt_list" ^ (string_of_int current) ^ ":\n" ^
+      "\t" ^ "push rcx ; push the list created \n" ^
+      "\t" ^ "sub rsp, 8 ; get rsp back, to before create the opt list \n" ^
+      "\t" ^ ";; now the opt list is pushed on stack, and ready, the rsp again point to the number of args (n) \n" ^ *)
+
+            (* ^ "\tmov rsi, 0 ; clean rsi to next store of number of args \n" *)
+            
+****
+
+
+;;;;; LIST OF CHANGES:
+
+;;;;;; Applic-
+;;;;; .1. const_tbl+1 as magic
+;;;;; .2. mov r11, nArgs (no magic)
+
+;;;;; LamnbdaOpt-
+;;;;; .1. mov r13, nParams (no opt)
+;;;;; .2. 
+
+
+    ;;; Applic
+    ;;; Change in #<applic_rec> procedure this 2 lines.
+	mov rax, const_tbl + 1 ; Nil, as magic
+    ;;;; mov r11, <nArgs>
+
+	push rax
+    mov rax, const_tbl + 4 ; mov rax, AddressInConstTable ;; #t, as param
+	push rax
+	push 1 ; parsing of operator below: ; num args
+
+
+	lambdaOpt1:
+	mov rsi, 0 ; store num of params in rsi 
+	MALLOC r10, 8 * (1 + 0) ; Allocate ExtEnv
+	mov r11, r10 ; copy of ExtEnv address
+	mov r12, 0 ; i
+	mov r13, 1 ; j
+	mov r15, qword[rbp + 16] ; lexical env
+
+	.copy_env:
+		cmp r12, 0 ; |env|
+		je .done_copy_env
+		mov r14, qword[r15 + 8 * r12] ; r14 = Env[i]
+		mov [r11 + 8 * r13], r14 ; ExtEnv[j] = r14
+		inc r12 ; inc counter of loop
+		inc r13 ; inc counter of loop
+		jmp .copy_env ; back to loop
+
+	.done_copy_env:
+		mov r12, 0 ; i
+		mov r15, rbp ; r15 = rbp
+		add r15, 32 ; r15 = address of first arg
+		MALLOC r14, 8*1 ; allocate ExtEnv[0]
+		mov r11, r14 ; copy of ExtEnv[0] 
+
+	.copy_params:
+		cmp r12, 0 ; 0 arguments
+		je .done_copy_params
+		mov r9, [r15] ; r9 = Param(i)
+		mov [r14], r9 ; ExtEnv [0][i] = r9
+		add r14, 8
+		add r15, 8
+		inc r12
+		jmp .copy_params
+
+	.done_copy_params:
+		mov [r10], r11
+		MAKE_CLOSURE(rax, r10, Lcode1)
+		jmp Lcont1
+
+
+	Lcode1:
+	push rbp
+	mov rbp , rsp
+    
+    ;;; Inject this code to #<lcodeOpt> procedure
+    ;;; Closure body
+
+    mov r13, 0 ; |Params| ;;;;; mov r13, <nParams>
+    mov r11, 1 ; |Args|
+    sub r11, r13 ; |Opt list|
+
+    mov r12, 0 ; Idx Loop
+    mov r9, const_tbl + 1 ; Nil element
+
+    .create_opt_list:
+        cmp r12, r11
+        je .done_create_opt_list
+        mov r8, PVAR(r12)
+        inc r12
+        MAKE_PAIR(rax, r8, r9) ;;; List of Opt args, into rax
+        mov r9, rax
+        jmp .create_opt_list
+    
+    .done_create_opt_list:
+    
+    ;;; Put list (rax) in last param location
+    mov r10, rbp
+    add r13, 0
+    shl r13, 3 
+    add r10, r13
+    add r10, 8 * 4 
+    mov [r10], rax
+
+    ;;;; Original body of closure.
+    ;;;; if want to take last param, it is in Location of last param.
+    ;;;; In this case, it in the first (0) Param.
+
+	mov rax, PVAR(0) ; mov rax, qword[rbp + 8 * (4 + 0)], pos (= minor) 
+	
+    leave
+	ret
+
+*****
+
+
 
 Helper compile-
 

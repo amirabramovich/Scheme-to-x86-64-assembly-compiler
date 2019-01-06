@@ -228,10 +228,36 @@ module Code_Gen : CODE_GEN = struct
       (* Helper function for Lcode of LambdaOpt *)
       let lcodeOpt vars opt body curr_count = 
         prev_args := List.length vars;
+        let current = !count in
+        count := !count + 1;
+        let len = List.length vars in
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
-        (* Adjust stack for opt *)
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n" ^
+        (* Adjust stack for opt *)
+        "\t" ^ ";;; Closure body \n" ^ 
+        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| ;;;;; mov r13, <nParams>\n" ^
+        "\t" ^ ";;;;; mov rcx, 1 ; |Args|\n" ^ 
+        "\t" ^ "sub rcx, r13 ; |Opt list|\n" ^
+        "\t" ^ "mov r12, 0 ; Idx Loop\n" ^
+        "\t" ^ "mov r9, const_tbl + 1 ; Nil element\n" ^
+        "\t" ^ ".create_opt_list" ^ (string_of_int current) ^ ":\n" ^
+        "\t\t" ^ "cmp r12, rcx\n" ^ 
+        "\t\t" ^ "je .done_create_opt_list" ^ (string_of_int current) ^ "\n" ^
+        "\t\t" ^ "mov r8, PVAR(r12)\n" ^
+        "\t\t" ^ "inc r12\n" ^ 
+        "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ;;; List of Opt args, into rax\n" ^
+        "\t\t" ^ "mov r9, rax\n" ^
+        "\t\t" ^ "jmp .create_opt_list" ^ (string_of_int current) ^ "\n" ^
+        "\t." ^ "done_create_opt_list" ^ (string_of_int current) ^ ":\n" ^
+        "\t" ^ ";;; Put list (rax) in last param location\n" ^
+        "\t" ^ "mov r10, rbp\n" ^
+        "\t" ^ "add r13, 0\n" ^
+        "\t" ^ "shl r13, 3 \n" ^
+        "\t" ^ "add r10, r13\n" ^
+        "\t" ^ "add r10, 8 * 4 \n" ^
+        "\t" ^ "mov [r10], rax \n" ^
+        "\t" ^ ";;;; Original body of closure.\n" ^
         (generate consts fvars body) ^ 
         "\t" ^ "leave ; done parsing lambdaOpt body above \n" ^
         "\t" ^ "ret\n" ^
@@ -355,56 +381,32 @@ module Code_Gen : CODE_GEN = struct
         let len = !prev_args in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
-    | Applic'(op, args) | ApplicTP'(op, args) -> let args = List.rev args in
-                            let len = List.length args in
-                            let current = !count in
-                            count := !count + 1;
-                            let rec applic_rec args =
-                            match args with
-                            | car :: cdr -> 
-                            (generate consts fvars car) ^
-                            "\t" ^ "push rax\n" ^ 
-                            applic_rec cdr
-                            | [] -> 
-                            "\tpush " ^ (string_of_int len) ^ " ; parsing of operator below:\n" ^
-
-                            (* "\t" ^ ";; update 6.1" ^ "\n" ^
-                            "\t" ^ "mov rdi, " ^ (string_of_int len) ^ " ; store num args in rdi \n" ^
-                            "\t" ^ "sub rdi, rsi ; rdi = num args - num params = length of opt list \n" ^
-                            
-                            "\t" ^ "add rsp, 8" ^ " ; got stack ptr \n" ^
-                            "\t" ^ "mov rcx, MAGIC ; default case, for push magic as arg, if | opt list | = 0, and the list should be empyu \n" ^
-                            "\n\t" ^ ".create_opt_list" ^ (string_of_int current) ^ ":\n" ^
-                            "\t\t" ^ "cmp rdi, 0 ; loop |opt list| times \n" ^
-                            "\t\t" ^ "je .done_create_opt_list" ^ (string_of_int current) ^ "\n" ^
-                            "\t\t" ^ "pop rbx" ^ " ; get the last arg \n" ^ 
-                            "\t\t" ^ "mov rdx, qword[rbx] ; get last arg \n" ^
-                            "\t\t" ^ "mov esi, SOB_NIL_ADDRESS ; init to SOB_NIL_ADDRESS, second element to make_pair \n" ^
-                            "\t\t" ^ "MAKE_PAIR(rcx, rdx, esi) ; rcx store ptr for new pair, rdx is curr arg \n" ^
-                            "\t\t" ^ "mov esi, rcx ; now esi is new pair (in next iteration, second element to make_pair) \n" ^
-                            "\t\t" ^ "dec rdi ; dec loop idx \n" ^
-                            "\t\t" ^ "jmp .create_opt_list" ^ (string_of_int current) ^ "\n" ^
-
-                            "\n\t" ^ ".done_create_opt_list" ^ (string_of_int current) ^ ":\n" ^
-                            "\t" ^ "push rcx ; push the list created \n" ^
-                            "\t" ^ "sub rsp, 8 ; get rsp back, to before create the opt list \n" ^
-                            "\t" ^ ";; now the opt list is pushed on stack, and ready, the rsp again point to the number of args (n) \n" ^ *)
-
-                            (generate consts fvars op) ^
-                            "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^
-                            "\tpush rbx ; push env\n" ^
-                            "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n" ^
-                            "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n" ^
-                            "\tinc rbx\n" ^
-                            "\tshl rbx, 3 ; rbx = rbx * 8\n" ^
-                            "\tadd rsp, rbx ; pop args\n" ^ 
-
-                            (* "\tmov rsi, 0 ; clean rsi to next store of number of args \n" *)
-                            
-                            in 
-                            "\n\tmov rax, 6666 ; begin applic\n" ^
-                            "\tpush rax\n" ^
-                            (applic_rec args)
+    | Applic'(op, args) | ApplicTP'(op, args) -> 
+        let args = List.rev args in
+        let len = List.length args in
+        let current = !count in
+        count := !count + 1;
+        let rec applic_rec args =
+          match args with
+          | car :: cdr -> 
+            (generate consts fvars car) ^
+            "\t" ^ "push rax\n" ^ 
+            applic_rec cdr
+          | [] -> 
+            "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; number of arguments \n" ^
+            "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n" ^
+            (generate consts fvars op) ^
+            "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^
+            "\tpush rbx ; push env\n" ^
+            "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n" ^
+            "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n" ^
+            "\tinc rbx\n" ^
+            "\tshl rbx, 3 ; rbx = rbx * 8\n" ^
+            "\tadd rsp, rbx ; pop args\n"
+        in 
+        "\n\t" ^ "mov rax, const_tbl + 1 ; applic \n" ^
+        "\t" ^ "push rax ; Nil as Magic \n" ^
+        (applic_rec args)
     | ApplicTP'(op, args) -> let args = List.rev args in
                               let len = List.length args in
                               let rec applicTP_rec args =
