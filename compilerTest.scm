@@ -285,7 +285,11 @@
 ;; ;; .2. find way to concat all tests of each type together, and all tests together (list & equal? not supported yet).
 
 
-;; ((lambda y y) 1) ; (1)
+;; ((lambda y y) 1 2) ; (1 2)
+;;                    ; (2 ())
+
+((lambda y y) 1) ; (1)
+                 ; (())
 
 ;; ((lambda y y)) ; ()
 
@@ -301,7 +305,7 @@
 ;;     c) 1 2 3 4 5) ; (2 3 4 5)
 
 
-(define voo (lambda (x . y) (begin x y)))
-(voo 1) ; ()
-(voo 1 2) ; (2)
-(voo 1 2 3) ;(2 3)
+;; (define voo (lambda (x . y) (begin x y)))
+;; (voo 1) ; ()
+;; (voo 1 2) ; (2)
+;; (voo 1 2 3) ;(2 3)

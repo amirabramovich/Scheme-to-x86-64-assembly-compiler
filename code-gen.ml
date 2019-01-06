@@ -227,7 +227,7 @@ module Code_Gen : CODE_GEN = struct
 
       (* Helper function for Lcode of LambdaOpt *)
       let lcodeOpt vars opt body curr_count = 
-        prev_args := List.length vars;
+        prev_args := List.length vars + 1;
         let len = List.length vars in
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
@@ -284,7 +284,7 @@ module Code_Gen : CODE_GEN = struct
         "\t\t" ^ "mov r12, 0 ; i\n" ^
         "\t\t" ^ "mov r15, rbp ; r15 = rbp\n" ^
         "\t\t" ^ "add r15, 32 ; r15 = address of first arg\n" ^
-        "\t\t" ^ "MALLOC r14, 8*" ^ (string_of_int (len + 1)) ^ " ; allocate ExtEnv[0]\n" ^ (* another param for opt *)
+        "\t\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0]\n" ^ (* another param for opt *)
         "\t\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n" ^
         "\n\t" ^ ".copy_params:\n" ^
         "\t\t" ^ "cmp r12, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
