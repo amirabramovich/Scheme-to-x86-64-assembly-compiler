@@ -1,0 +1,12 @@
+make[1]: Entering directory '/home/nitsan/Desktop/comp191/comp_proj/comp_proj'
+cd /home/nitsan/Desktop/comp191/comp_proj/comp_proj/ && ocaml compiler.ml /home/nitsan/Desktop/comp191/comp_proj/comp_proj/Project_Test/Tests/test_50/test.scm > Project_Test/Tests/test_50/test.s && nasm -f elf64 -o Project_Test/Tests/test_50/test.o Project_Test/Tests/test_50/test.s && gcc -static -m64 -o Project_Test/Tests/test_50/test Project_Test/Tests/test_50/test.o && mv Project_Test/Tests/test_50/test /home/nitsan/Desktop/comp191/comp_proj/comp_proj
+File "./code-gen.ml", line 361, characters 8-27:
+Warning 11: this match case is unused.
+Project_Test/Tests/test_50/test.s:17: error: expression syntax error
+Project_Test/Tests/test_50/test.s:20: error: parser: instruction expected
+Project_Test/Tests/test_50/test.s:25: error: expression syntax error
+Project_Test/Tests/test_50/test.s:28: error: symbol `hello' redefined
+Project_Test/Tests/test_50/test.s:31: error: parser: instruction expected
+Makefile:7: recipe for target 'Project_Test/Tests/test_50/test' failed
+make[1]: *** [Project_Test/Tests/test_50/test] Error 1
+make[1]: Leaving directory '/home/nitsan/Desktop/comp191/comp_proj/comp_proj'

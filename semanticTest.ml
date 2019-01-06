@@ -1326,3 +1326,6 @@ let c40 = (run_semantics (tag_parse_expression (read_sexpr "
       (* 1 2))
         ))
         ")));;
+let c44 = (run_semantics (tag_parse_expression (read_sexpr "
+        5.5
+        ")));;

@@ -1,0 +1,22 @@
+   
+          (define caar (lambda (pair) (car (car pair))))
+          (define cadr (lambda (pair) (car (cdr pair))))
+          (define cddr (lambda (pair) (cdr (cdr pair))))
+          (define cdar (lambda (pair) (cdr (car pair))))
+          (define caaar (lambda (pair) (car (caar pair))))
+          (define caadr (lambda (pair) (cdr (car pair))))
+          (define cdaar (lambda (pair) (cdr (caar pair))))
+          (define cdadr (lambda (pair) (cdr (cadr pair))))
+          (define cddar (lambda (pair) (cdr (cdar pair))))
+          (define cdddr (lambda (pair) (cdr (cddr pair)))) 
+
+         (define remq (lambda (obj lst)
+                (if (null? lst)
+                '()
+                (let* ([hd (car lst)] [tl (cdr lst)] [rest (lambda () (remq obj tl))])
+                    (if (eq? obj hd)
+                        (rest)
+                        (cons hd (rest)))))))
+        (remq 'a '(a b a c a d))
+        (remq 'a '(b c d))   
+    

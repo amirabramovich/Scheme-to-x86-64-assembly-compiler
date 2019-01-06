@@ -1,0 +1,5 @@
+make[1]: Entering directory '/home/nitsan/Desktop/comp191/comp_proj/comp_proj'
+cd /home/nitsan/Desktop/comp191/comp_proj/comp_proj/ && ocaml compiler.ml /home/nitsan/Desktop/comp191/comp_proj/comp_proj/Project_Test/Tests/test_269/test.scm > Project_Test/Tests/test_269/test.s && nasm -f elf64 -o Project_Test/Tests/test_269/test.o Project_Test/Tests/test_269/test.s && gcc -static -m64 -o Project_Test/Tests/test_269/test Project_Test/Tests/test_269/test.o && mv Project_Test/Tests/test_269/test /home/nitsan/Desktop/comp191/comp_proj/comp_proj
+File "./code-gen.ml", line 361, characters 8-27:
+Warning 11: this match case is unused.
+make[1]: Leaving directory '/home/nitsan/Desktop/comp191/comp_proj/comp_proj'
