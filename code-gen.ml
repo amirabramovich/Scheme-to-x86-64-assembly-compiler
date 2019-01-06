@@ -387,7 +387,7 @@ module Code_Gen : CODE_GEN = struct
         let len = !prev_args in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
-    | Applic'(op, args) | ApplicTP'(op, args) -> 
+    | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
         let args = List.rev args in
         let len = List.length args in
         let current = !count in
@@ -413,28 +413,30 @@ module Code_Gen : CODE_GEN = struct
         "\n\t" ^ "mov rax, const_tbl + 1 ; applic \n" ^
         "\t" ^ "push rax ; Nil as Magic \n" ^
         (applic_rec args)
-    | ApplicTP'(op, args) -> let args = List.rev args in
-                              let len = List.length args in
-                              let rec applicTP_rec args =
-                              match args with
-                              | car :: cdr -> 
-                              (generate consts fvars car) ^ 
-                              "\tpush rax\n" ^ 
-                              applicTP_rec cdr
-                              | [] -> 
-                              "\tpush "^(string_of_int len)^" ; parsing of operator below:\n"^
-                              (generate consts fvars op)^
-                              "\tmov r9, [rax+TYPE_SIZE] ; closure's env\n"^
-                              "\tpush r9 ; push env\n"^
-                              "\tpush qword [rbp + 8] ; old ret addr\n"^
-                              "\tmov r9, qword[rbp]\n"^
-                              "\tSHIFT_FRAME "^(string_of_int (len+5))^"\n"^
-                              "\tmov rbp, r9\n"^
-                              "\tjmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"
-                              in 
-                              "\tmov rax, 9999 ; begin applicTP\n"^
-                              "\tpush rax\n"^
-                              (applicTP_rec args)
+    | ApplicTP'(op, args) -> 
+        let args = List.rev args in
+        let len = List.length args in
+        let rec applicTP_rec args =
+          match args with
+            | car :: cdr -> 
+              (generate consts fvars car) ^ 
+              "\t" ^ "push rax \n" ^ 
+              applicTP_rec cdr
+            | [] -> 
+              "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; number of arguments \n" ^
+              "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n"^
+              (generate consts fvars op) ^
+              "\t" ^ "mov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
+              "\t" ^ "push r9 ; push env\n" ^
+              "\t" ^ "push qword [rbp + 8] ; old ret addr \n" ^
+              "\t" ^ "mov r9, qword[rbp] ; curr frame \n" ^
+              "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
+              "\t" ^ "mov rbp, r9\n" ^
+              "\t" ^ "jmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code \n"
+        in 
+        "\t" ^ "mov rax, const_tbl + 1 ;  applic tail position \n" ^
+        "\t" ^ "push rax \n" ^
+        (applicTP_rec args)
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;
