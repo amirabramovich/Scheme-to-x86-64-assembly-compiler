@@ -1076,6 +1076,40 @@ prev applic
 ****
 
 
+compilerTest,
+try to fix bug
+applic tp
+
+
+	push rax ; push arg 
+	push 1; push number args 
+	; start parse op 
+	mov rax, qword [fvar_tbl + 0 * WORD_SIZE] ; VarFree 
+	; finish parse op 
+	mov rbx, [rax + TYPE_SIZE] ; closure's env 
+	push rbx ; push env (args) 
+
+    ;; commnented, due to Nadav comment
+    push qword[rbp + 8*1] ; push old ret addr
+    mov rsp, rbp ; restore old frame ptr register
+
+	SHIFT_FRAME 6 ; shift frame, where frame size is 6
+	mov rax, qword [fvar_tbl + 0 * WORD_SIZE] ; VarFree 
+	
+    mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code
+    
+    add rsp, 8 ;; this fix the problem, need to do it automatically.
+
+	jmp rbx ; jmp to code (closure) 
+
+
+    ;; code fail in is_boolean
+    ;; mov sil, byte[rsi]
+    ;; error in param
+
+****
+
+
 Helper compile-
 
 ocaml compiler.ml compilerTest.scm > compilerTest.s
@@ -1092,7 +1126,7 @@ set tui border-kind acs
 layout asm
 tui enable
 tui reg general
-
+  
 
 display registers while debbuging-
 x/nxg register/address

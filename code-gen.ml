@@ -176,10 +176,7 @@ module Code_Gen : CODE_GEN = struct
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
      "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons"
      ];;
-     (* TODO:
-        implement append (variadic), apply (variadic), equal?, length, list (variadic), 
-        map (variadic), not, number?, zero?
-     *)
+     (* TODO: implement apply (variadic) *)
 
   let first (x, y) = x;;
 
@@ -254,7 +251,8 @@ module Code_Gen : CODE_GEN = struct
       | Var'(VarFree v) -> "\t" ^ "mov rax, qword [fvar_tbl + " ^ (string_of_int (get_fvar_addr v fvars)) ^ " * WORD_SIZE]" ^ " ; VarFree \n"
       (* Add Box' *)
       | Var'(VarParam(_, pos)) | Box'(VarParam(_, pos)) ->
-          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ") ; Var' or Box' of VarParam \n"
+          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ") ; Var' or Box' of VarParam \n" ^
+          "\t" ^ "mov r15, IS_PARAM \ ; for sign in ApplicTP, that this arg is param \n"
       | Var'(VarBound(_, depth, pos)) | Box'(VarBound(_, depth, pos)) -> 
           "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; Var' or Box' of VarBound \n" ^
                                         "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")" ^ "\n" ^
@@ -333,7 +331,7 @@ module Code_Gen : CODE_GEN = struct
           args_count := !args_count + (List.length vars); 
           let out = "\n\t" ^ ";LambdaOpt \n" ^ (assemLambda vars body curr_count curr_env) ^ (lcodeSimple body curr_count) in
           env_count := !env_count - 1; args_count := !args_count - (List.length vars); out
-      | Applic'(op, args) | ApplicTP'(op, args) -> 
+      | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
           let args = List.rev args in
           let len = List.length args in
           (* Helper function, generate applic *)
@@ -362,6 +360,8 @@ module Code_Gen : CODE_GEN = struct
           "\t" ^ "push rax ; push magic to stack \n" ^
           (applic_gen args)
       | ApplicTP'(op, args) ->
+          let currIdx = !count in
+          count := !count + 1;
           let revArgs = List.rev args in
           let numArgs = List.length args in
           (* Helper function, generate applic, in tail position *)
@@ -382,6 +382,11 @@ module Code_Gen : CODE_GEN = struct
                 "\t" ^ "push qword[rbp + 8*1] ; push old ret addr \n" ^ 
                 "\t" ^ "mov rsp, rbp ; restore old frame ptr register \n" ^
                 (* Fix the stack *)
+                "\t" ^ "cmp r15, IS_PARAM ; if arg is param, need to add 8 to rsp \n" ^
+                "\t" ^ "jne .not_param" ^ (string_of_int currIdx) ^ "\n" ^
+                "\t" ^ "add rsp, 8 ; for my check \n" ^ (* added, for my check *)
+                "\t" ^ "mov r15, 0 \n" ^
+                "\t" ^ ".not_param" ^ (string_of_int currIdx) ^ ": \n" ^
                 "\t" ^ "SHIFT_FRAME " ^ (string_of_int (numArgs + 5)) ^ " ; shift frame, where frame size is " ^ (string_of_int (numArgs + 5)) ^ "\n" ^
                 (generate consts fvars op) ^ (* parse op again, for closure code *)
                 "\t" ^ "mov rbx, [rax + TYPE_SIZE + WORD_SIZE] ; clousre's code \n" ^
