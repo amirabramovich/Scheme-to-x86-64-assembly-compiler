@@ -48,20 +48,20 @@
 
 
 ;; ;; Define
-"Define"
-(define y (cons 1 2)) ; .d1.
-y ; (1 . 2)
-(define x (+ 1 2)) ; .d2.
-x ; 3
-"----------------------"
+;; "Define"
+;; (define y (cons 1 2)) ; .d1.
+;; y ; (1 . 2)
+;; (define x (+ 1 2)) ; .d2.
+;; x ; 3
+;; "----------------------"
 
 
 ;; ;; Set
-"Set"
-(set-car! y 0) ; .s1. regular
-y ; (0 . 2)
-(set-cdr! y 1) ; .s2. regular
-y ; (0 . 1)
+;; "Set"
+;; (set-car! y 0) ; .s1. regular
+;; y ; (0 . 2)
+;; (set-cdr! y 1) ; .s2. regular
+;; y ; (0 . 1)
 ;; ((lambda (x)
 ;;     (+
 ;;         ((lambda ()
@@ -73,94 +73,94 @@ y ; (0 . 1)
 ;;             2))
 ;;                 )
 ;;                     ) 2) ; .s3. 6, VarBound
-((lambda (x)
-    (set! x 3)
-    x
-        ) 1) ; s4. 3, VarParam
+;; ((lambda (x)
+;;     (set! x 3)
+;;     x
+;;         ) 1) ; s4. 3, VarParam
 ;; ((lambda (x)
 ;;     ((lambda ()
 ;;         (set! x 2)
 ;;         x))
 ;;         ) 1) ; .s5. 2, VarBound, Set, works
-"----------------------"
+;; "----------------------"
 
 
-;; Lambda
-"Lambda"
-;; (eq? ((lambda (x) x) 1) 1) ; .l1. 1
-((lambda (x) (+ x x)) 1) ; .l2. 2
-((lambda (x y) (+ x y)) 1 2) ; .l3. 3
-((lambda ()
-        ((lambda ()
-            (+ 2 2))))) ; .l4. 4
-((lambda ()
-        (+
-        ((lambda ()
-            (+ 2 2)))
-            1
-            )
-            )) ; .l5. 5
-((lambda ()
-        (+
-        ((lambda ()
-            (+ 2 2)))
-            ((lambda ()
-                2))
-            )
-            )) ; .l6. 6
-((lambda ()
-        ((lambda ()
-            ((lambda ()
-                (+ 3 4)
-            ))
-                ))
-                    )) ; .l7. 7
-"----------------------"
+;; ;; Lambda
+;; "Lambda"
+;; ;; (eq? ((lambda (x) x) 1) 1) ; .l1. 1
+;; ((lambda (x) (+ x x)) 1) ; .l2. 2
+;; ((lambda (x y) (+ x y)) 1 2) ; .l3. 3
+;; ((lambda ()
+;;         ((lambda ()
+;;             (+ 2 2))))) ; .l4. 4
+;; ((lambda ()
+;;         (+
+;;         ((lambda ()
+;;             (+ 2 2)))
+;;             1
+;;             )
+;;             )) ; .l5. 5
+;; ((lambda ()
+;;         (+
+;;         ((lambda ()
+;;             (+ 2 2)))
+;;             ((lambda ()
+;;                 2))
+;;             )
+;;             )) ; .l6. 6
+;; ((lambda ()
+;;         ((lambda ()
+;;             ((lambda ()
+;;                 (+ 3 4)
+;;             ))
+;;                 ))
+;;                     )) ; .l7. 7
+;; "----------------------"
 
 
-;; LambdaOpt
-"LambdaOpt"
-((lambda (a . b) 1) 1) ; .l_1. 1
-(define (func .  x) x) ; .l_2. expr' = Def' (Var' (VarFree "func"), LambdaOpt' ([], "x", Var' (VarParam ("x", 0))))
-(func 2) ; (2)
-((lambda (a b . c) (+ a b)) 1 2) ; .l_3.  3
-((lambda (a . b)
-        a) 4 2) ; .l_4. 4
-((lambda (a . b)
-        a) 5) ; .l_5. 5
-((lambda (a b . c)
-      (lambda () c)
-      ((lambda ()
-        ((lambda () 6))))) 1 2) ; .l_6. 6
-((lambda (a b . c)
-      (lambda () c)
-      ((lambda ()
-        ((lambda () 7))))) 1 2 3) ; .l_7. 7
-((lambda (a b . c)
-      (lambda ()
-        (set! a (+ a a))
-        c
-      )
-      (lambda () (set! b (lambda () (set! c 5))))
-      (+ a b)
-    ) 5 3) ; .l_8. 8
-((lambda (a b . c)
-      (lambda ()
-        (set! a (+ a a))
-        c
-      )
-      (lambda () (set! b (lambda () (set! c 5))))
-      (+ a b)
-    ) 6 3 4) ; .l_9. 9
+;; ;; LambdaOpt
+;; "LambdaOpt"
+;; ((lambda (a . b) 1) 1) ; .l_1. 1
+;; (define (func .  x) x) ; .l_2. expr' = Def' (Var' (VarFree "func"), LambdaOpt' ([], "x", Var' (VarParam ("x", 0))))
+;; (func 2) ; (2)
+;; ((lambda (a b . c) (+ a b)) 1 2) ; .l_3.  3
+;; ((lambda (a . b)
+;;         a) 4 2) ; .l_4. 4
+;; ((lambda (a . b)
+;;         a) 5) ; .l_5. 5
+;; ((lambda (a b . c)
+;;       (lambda () c)
+;;       ((lambda ()
+;;         ((lambda () 6))))) 1 2) ; .l_6. 6
+;; ((lambda (a b . c)
+;;       (lambda () c)
+;;       ((lambda ()
+;;         ((lambda () 7))))) 1 2 3) ; .l_7. 7
+;; ((lambda (a b . c)
+;;       (lambda ()
+;;         (set! a (+ a a))
+;;         c
+;;       )
+;;       (lambda () (set! b (lambda () (set! c 5))))
+;;       (+ a b)
+;;     ) 5 3) ; .l_8. 8
+;; ((lambda (a b . c)
+;;       (lambda ()
+;;         (set! a (+ a a))
+;;         c
+;;       )
+;;       (lambda () (set! b (lambda () (set! c 5))))
+;;       (+ a b)
+;;     ) 6 3 4) ; .l_9. 9
 
 ;; TODO: add more complicated cases of LambdaOpt', check it, and fix code if needed
 
-"----------------------"
+;; "----------------------"
 
 
 ;; Applic
-"Applic"
-(+ 1 2) ; .a0. 3, simple Applic'
+;; "Applic"
+;; (+ 1 2) ; .a0. 3, simple Applic'
 
 ;; ((lambda (x)
 ;;     (+
@@ -191,7 +191,7 @@ y ; (0 . 1)
 ;;                 "done!")
 ;;                       )) 0 1)) ; .a4. "done!"
 
-(cons 1 (cons 2 3)) ; .a5. (1 2 . 3)
+;; (cons 1 (cons 2 3)) ; .a5. (1 2 . 3)
 ;; (let ((x 1)
 ;;         (y 2))
 ;;     (+ x y)) ; .a6. 3
@@ -283,3 +283,17 @@ y ; (0 . 1)
 ;; ;; TODO:
 ;; ;; .1. find way to check each expression (equal? or another function of compare).
 ;; ;; .2. find way to concat all tests of each type together, and all tests together (list & equal? not supported yet).
+
+
+;; ((lambda y y) 1) ; 1
+
+;; ((lambda y y)) ; ()
+
+((lambda y y)'()) ; (())
+
+;; ((lambda (a . c)
+;;     c) 1) ; ()
+;; ((lambda (a . c)
+;;         c) 1 2) ; (2)
+;; ((lambda (a . c)
+;;     c) 1 2 3) ; (2 3)

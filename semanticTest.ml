@@ -1326,3 +1326,36 @@ let c40 = (run_semantics (tag_parse_expression (read_sexpr "
       (* 1 2))
         ))
         ")));;
+
+let c41  = (run_semantics (tag_parse_expression (read_sexpr "
+        (define pro (lambda y y))
+        ")));;
+
+let c42  = (run_semantics (tag_parse_expression (read_sexpr "
+        (pro 5 4 3 2 1)
+        ")));;
+let c43  = (run_semantics (tag_parse_expression (read_sexpr "
+(pro (cons 5 '()))
+")));;
+
+let c44  = (run_semantics (tag_parse_expression (read_sexpr "
+(pro '(5 4 3 2 1)) ;
+")));;
+
+let c45  = (run_semantics (tag_parse_expression (read_sexpr "
+(define pro (lambda y y)) 
+"
+)));;
+
+let c46  = (run_semantics (tag_parse_expression (read_sexpr "
+(define (pro .  y) y)
+")));;
+
+let c47  = (run_semantics (tag_parse_expression (read_sexpr "
+((lambda (a . c)
+    c) 1)
+    ")));;
+
+let c48  = (run_semantics (tag_parse_expression (read_sexpr "
+    ((lambda y y))
+    ")));;
