@@ -302,6 +302,10 @@ module Code_Gen : CODE_GEN = struct
                                                 "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
                                                 "\t" ^ "pop qword [rax]\n" ^
                                                 "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
+    | Box'(VarParam (_, pos)) -> "\tmov rax, PVAR(" ^ (string_of_int pos) ^ ") ;\n"^
+                                  "\tMALLOC rbx, 8 ;\n"^
+                                  "\tmov [rbx], rax ;\n"^
+                                  "\tmov rax, rbx ;\n"
     | LambdaSimple'(vars, body) -> 
         let (curr_count, curr_env) = (!count, !env_count) in
         count := !count + 1;
@@ -324,29 +328,28 @@ module Code_Gen : CODE_GEN = struct
                             "\t" ^ "push rax\n" ^ 
                             applic_rec cdr
                             | [] -> 
-                            "\tpush "^
-                            (string_of_int len)^" ; parsing of operator below:\n"^
+                            "\tpush "^(string_of_int len)^" ; parsing of operator below:\n"^
                             (generate consts fvars op)^
                             "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n"^
                             "\tpush rbx ; push env\n"^
                             "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"^
                             "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n"^
-                            (*"\tinc rbx\n"^ *)
+                            "\tinc rbx\n"^
                             "\tshl rbx, 3 ; rbx = rbx * 8\n"^
                             "\tadd rsp, rbx ; pop args\n" in 
-                            (*"\n\tmov rax, 6666 ; begin applic\n"^
-                            "\tpush rax\n"^ *)
+                            "\n\tmov rax, 6666 ; begin applic\n"^
+                            "\tpush rax\n"^
                             (applic_rec args)
     | ApplicTP'(op, args) -> let args = List.rev args in
                               let len = List.length args in
-                              let rec applic_rec args =
+                              let rec applicTP_rec args =
                               match args with
                               | car :: cdr -> 
                               (generate consts fvars car) ^ 
-                              "\tpush rax ;; applic case in generate func\n" ^ 
-                              applic_rec cdr
+                              "\tpush rax\n" ^ 
+                              applicTP_rec cdr
                               | [] -> 
-                              "\tpush "^(string_of_int len)^"\n"^
+                              "\tpush "^(string_of_int len)^" ; parsing of operator below:\n"^
                               (generate consts fvars op)^
                               "\tmov r9, [rax+TYPE_SIZE] ; closure's env\n"^
                               "\tpush r9 ; push env\n"^
@@ -356,9 +359,9 @@ module Code_Gen : CODE_GEN = struct
                               "\tmov rbp, r9\n"^
                               "\tjmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"
                               in 
-                              "\tmov rax, 9999\n"^
+                              "\tmov rax, 9999 ; begin applicTP\n"^
                               "\tpush rax\n"^
-                              (applic_rec args)
+                              (applicTP_rec args)
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;

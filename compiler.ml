@@ -1,7 +1,6 @@
 #use "semantic-analyser.ml";;
 #use "code-gen.ml";;
-open Semantics;;
-open Code_Gen;;
+
 
 let file_to_string f =
   let ic = open_in f in
