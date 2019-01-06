@@ -156,16 +156,14 @@ exception X_missing_input_file;;
 
 try
   let infile = Sys.argv.(1) in
-  let code =  (* TODO: remove the comment below when all cases in generator in code-gen are done *)
-    (* (file_to_string "stdlib.scm") ^  *)
-  (file_to_string infile) in
+  let code = (file_to_string "stdlib.scm") ^ (file_to_string infile) in
   let asts = string_to_asts code in
   let consts_tbl = Code_Gen.make_consts_tbl asts in
   let fvars_tbl = Code_Gen.make_fvars_tbl asts in
   let generate = Code_Gen.generate consts_tbl fvars_tbl in 
   let code_fragment = String.concat "\n"
                         (List.map
-                           (fun ast -> (generate ast) ^ "    call write_sob_if_not_void\n")
+                           (fun ast -> (generate ast) ^ "\tcall write_sob_if_not_void\n")
                            asts) in
   let provided_primitives = file_to_string "prims.s" in
                    
