@@ -1,4 +1,3 @@
-
 apply:
     push rbp
     mov rbp, rsp
@@ -6,50 +5,39 @@ apply:
     mov r9, PVAR(0) ;; proc
     mov r8, PVAR(1) ;; pair
 
-    mov r12, 1 ;; counter <nargs>, 0 elem to push on '+' is mandatory
+    mov r12, 1 ;; counter <nargs>, count from first arg
+    mov r13, const_tbl + 1  ;; for cmp in loop
 
     .push_elems:
-	CAR r10, r8 ;; r10 got car ; 1
-    CDR r11, r8 ;; r11 got cdr  ; Nil
+
+	CAR r10, r8 ;; r10 got car
+    CDR r11, r8 ;; r11 got cdr
 
     push r10 ;; push car
+    mov r8, r11 ;; old cdr is new list
+    add r12, 1 ;; inc <nargs> counter
 
-    MALLOC r15, 8    ;; add to 0 each time
-    mov qword[r15], 0 
-    push r15   
+    cmp r11, r13
+    jne .push_elems
 
-    push r10 
+    push r12 ;; num args
 
-    mov r8, r11 ;; list got cdr
-    add r12, 1 ;; inc counter <nargs>
-
-    mov r13, const_tbl + 1 
-    cmp r11, r13 
-    
-    je .finish_push_elems
-    jmp .push_elems
-
-    ;; now all elems pushed the stack
-.finish_push_elems:
-
-    push r12 ;; push <nargs> 
-
-    mov rax, r9 ; proc ptr
-    mov rbx, [rax+TYPE_SIZE] ; env
-	push rbx 
-	mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; code
-	call rbx ;
-
+    mov rax, r9 ;; proc ptr
+    mov rbx, [rax+TYPE_SIZE] ;; env
+	push rbx ;; push env
+	mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ;; code
+	call rbx ;; call code (code of closure)
 
     add rsp, 8 ;; add num args
     pop rbx ;; pop args count
     shl r12, 3 ;; 8 * <nargs>
     add rsp, r12 ;; add the size of args
-    jmp .return
+  
 
 .return:
     leave
     ret
+
 
 
 is_boolean:

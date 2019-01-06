@@ -18,7 +18,7 @@
 ;;   (let ((= =))
 ;;     (lambda (x) (= x 0))))
 
-;; (define list (lambda x x))
+(define list (lambda x x))
 
 ;; (define list? 
 ;;   (let ((null? null?) (pair? pair?) (cdr cdr))

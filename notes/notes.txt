@@ -1269,6 +1269,36 @@ lcode opt
 
 
 *****
+apply
+
+*****
+
+
+    ; push r10 ;; checkkk 
+    ; mov r8, r11 ;; list got cdr
+    ; add r12, 1 ;; inc counter <nargs>
+    ; cmp r11, r13
+    ; je .push_elems
+    ;; push r12 ;; push <nargs> 
+    ; push 2 ;;; 3 args ;; 1,2, nil
+
+
+  
+    ; add rsp, 2 * 8 ;; 1 args * 8 , 8 is size of each param
+    ; cmp r11, r13  ;;;;
+    ; je .return
+    ;;;; je .finish_push_elems ;;;; 
+    ; jmp .push_elems ;;;;
+    ;;;; jmp .return
+
+
+
+
+    ; MALLOC r15, 8    ;; add to 0 each time
+    ; mov qword[r15], 5 ;; init number 0 to push at first time
+    ; mov rax, r15 ;; mov to rax for first time
+
+*****
 
 
 

@@ -47,5 +47,13 @@
 ;  ((yo 3 5) 9)
 
 ;; (list? 1)
-(apply + '(1 3)) ; 4
-                 ; 3
+;; (apply < '(1 2 3 4)) ; #t
+(apply list '(1 2 3)) ;; (1 2 3)
+                      ;; (3 2)
+
+;; (apply list '(1 2)) ;; (1 2)
+                      ;; (2 1) 
+
+
+;; false ?
+                    ;;  push only last 2 vars ... 
