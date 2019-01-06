@@ -239,9 +239,15 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "sub rcx, r13 ; |Opt list|\n" ^
         "\t" ^ "mov r12, rcx\n" ^
         "\t" ^ "add r12, 0\n" ^
-        "\t" ^ "mov r9, const_tbl + 1 ; Nil element\n" ^
+        "\t" ^ "mov r9, const_tbl + 1 ; Nil element \n" ^
+        "\t" ^ "mov r14, 0 ; counter end of loop \n" ^
+        "\t" ^ "cmp r13, 0 ; Variadic case \n" ^
+        "\t" ^ "jne .non_variadic ; \n" ^
+        "\t" ^ "sub r12, 1 ; go to prev param \n" ^
+        "\t" ^ "sub r14, 1 ; let us do one more loop \n" ^
+        "\t" ^ ".non_variadic: \n" ^    
         "\t" ^ ".create_opt_list: \n" ^
-        "\t\t" ^ "cmp r12, 0\n" ^ 
+        "\t\t" ^ "cmp r12, r14 ; new counter end of loop \n" ^
         "\t\t" ^ "je .done_create_opt_list \n" ^
         "\t\t" ^ "mov r8, PVAR(r12)\n" ^
         "\t\t" ^ "dec r12\n" ^ 
