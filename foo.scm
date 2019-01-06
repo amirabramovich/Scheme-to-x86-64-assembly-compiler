@@ -31,9 +31,9 @@
 ; (define (func .  x) x)
 ; (define gaa (lambda (a b . c) (+ a b)))
 ; (define voo (lambda (x . y) (begin x y)))
-(define adder (lambda (x) (lambda (y) (+ x y))))
-adder
-((adder 3)9)
+;; (define adder (lambda (x) (lambda (y) (+ x y))))
+;; adder
+;; ((adder 3)9)
 
 ;  (define plus3 (adder 3))
 ;  (plus3 9)
@@ -45,3 +45,7 @@ adder
 ; ((lambda (x) (f (g (g x))))5)
 ; (define yo (lambda (x y) (lambda (z) (+ (+ 1 y) z))))
 ;  ((yo 3 5) 9)
+
+;; (list? 1)
+(apply + '(1 3)) ; 4
+                 ; 3

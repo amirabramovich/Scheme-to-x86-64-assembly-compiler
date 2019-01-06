@@ -154,7 +154,8 @@ module Code_Gen : CODE_GEN = struct
      "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
      "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
-     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons"
+     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons";
+     "apply", "apply"
      ];;
      
   (* TODO: implement apply (variadic) *)
@@ -387,7 +388,7 @@ module Code_Gen : CODE_GEN = struct
         let len = !prev_args in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
-    | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
+    | Applic'(op, args) | ApplicTP'(op, args) -> 
         let args = List.rev args in
         let len = List.length args in
         let current = !count in
