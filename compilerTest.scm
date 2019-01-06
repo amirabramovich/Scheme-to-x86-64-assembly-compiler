@@ -295,3 +295,4 @@
 ;; TODO:
 ;; .1. find way to check each expression (equal? or another function of compare).
 ;; .2. find way to concat all tests of each type together, and all tests together (list & equal? not supported yet).
+;; 
