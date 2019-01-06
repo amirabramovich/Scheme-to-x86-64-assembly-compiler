@@ -287,13 +287,13 @@
 
 ;; ((lambda y y) 1) ; (1)
 
-;; ((lambda y y)) ; ()
+((lambda y y)) ; ()
 
 ;; ((lambda y y)'()) ; (())
 
 ;; ((lambda (a . c)
 ;;     c) 1) ; ()
-((lambda (a . c)
-        c) 1) ; ()
+;; ((lambda (a . c)
+;;         c) 1) ; ()
 ;; ((lambda (a . c)
 ;;     c) 1 2 3 4 5) ; (2 3)
