@@ -252,7 +252,7 @@ module Code_Gen : CODE_GEN = struct
       (* Add Box' *)
       | Var'(VarParam(_, pos)) | Box'(VarParam(_, pos)) ->
           "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ") ; Var' or Box' of VarParam \n" ^
-          "\t" ^ "mov r15, IS_PARAM \ ; for sign in ApplicTP, that this arg is param \n"
+          "\t" ^ "mov r15, IS_PARAM ; for sign in ApplicTP, that this arg is param \n"
       | Var'(VarBound(_, depth, pos)) | Box'(VarBound(_, depth, pos)) -> 
           "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; Var' or Box' of VarBound \n" ^
                                         "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")" ^ "\n" ^
