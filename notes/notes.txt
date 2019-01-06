@@ -1147,7 +1147,7 @@ prev applic
       "\t" ^ ";; now the opt list is pushed on stack, and ready, the rsp again point to the number of args (n) \n" ^ *)
 
             (* ^ "\tmov rsi, 0 ; clean rsi to next store of number of args \n" *)
-            
+
 ****
 
 
@@ -1254,6 +1254,19 @@ prev applic
 	
     leave
 	ret
+
+*****
+
+
+lcode opt
+*****
+
+
+
+        (* "\t" ^ "mov r12, 0 ; Idx Loop\n" ^
+        "\t" ^ "add r12, 1 \n " ^ *)
+        (* "\t" ^ "add rcx, 1 \n" ^ *)
+
 
 *****
 

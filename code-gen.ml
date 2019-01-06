@@ -239,13 +239,14 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| ;;;;; mov r13, <nParams>\n" ^
         "\t" ^ ";;;;; mov rcx, 1 ; |Args|\n" ^ 
         "\t" ^ "sub rcx, r13 ; |Opt list|\n" ^
-        "\t" ^ "mov r12, 0 ; Idx Loop\n" ^
+        "\t" ^ "mov r12, rcx\n" ^
+        "\t" ^ "add r12, 1\n" ^
         "\t" ^ "mov r9, const_tbl + 1 ; Nil element\n" ^
         "\t" ^ ".create_opt_list" ^ (string_of_int current) ^ ":\n" ^
-        "\t\t" ^ "cmp r12, rcx\n" ^ 
+        "\t\t" ^ "cmp r12, 0\n" ^ 
         "\t\t" ^ "je .done_create_opt_list" ^ (string_of_int current) ^ "\n" ^
         "\t\t" ^ "mov r8, PVAR(r12)\n" ^
-        "\t\t" ^ "inc r12\n" ^ 
+        "\t\t" ^ "dec r12\n" ^ 
         "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ;;; List of Opt args, into rax\n" ^
         "\t\t" ^ "mov r9, rax\n" ^
         "\t\t" ^ "jmp .create_opt_list" ^ (string_of_int current) ^ "\n" ^
