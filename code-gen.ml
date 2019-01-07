@@ -433,9 +433,12 @@ module Code_Gen : CODE_GEN = struct
               (generate consts fvars op) ^
               "\t" ^ "mov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
               "\t" ^ "push r9 ; push env\n" ^
+              "\t" ^ "mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; closure's code\n" ^
               "\t" ^ "push qword [rbp + 8] ; old ret addr \n" ^
+              "\t" ^ "mov r15, qword[rbp] \n" ^
               "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
-              "\t" ^ "jmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code \n"
+              "\t" ^ "mov rbp, r15 \n" ^
+              "\t" ^ "jmp r10 ; clousre's code \n"
         in 
         "\t" ^ "mov rax, const_tbl + 1 ;  applic tail position \n" ^
         "\t" ^ "push rax \n" ^
