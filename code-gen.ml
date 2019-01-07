@@ -238,10 +238,10 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n" ^
         (* Adjust stack for opt *)
+        (* TODO: order in this code *)
         "\t" ^ ";;; Closure body \n" ^ 
-        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| ;;;;; mov r13, <nParams>\n" ^
-        "\t" ^ ";;;;; mov rcx, 1 ; |Args|\n" ^ 
-        "\t" ^ "sub rcx, r13 ; |Opt list|\n" ^
+        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| \n" ^
+        "\t" ^ "sub rcx, r13 ; |Opt list| \n" ^
         "\t" ^ "mov r12, rcx\n" ^
         "\t" ^ "add r12, 0\n" ^
         "\t" ^ "mov r9, const_tbl + 1 ; Nil element \n" ^
@@ -251,17 +251,22 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "sub r12, 1 ; go to prev param \n" ^
         "\t" ^ "sub r14, 1 ; let us do one more loop \n" ^
         "\t" ^ ".non_variadic: \n" ^    
+        "\t" ^ "cmp r13, 2 \n" ^
+        "\t" ^ "jl .one_arg \n" ^
+        "\t" ^ "add r12, 1 \n " ^
+        "\t" ^ "add r14, 1 \n " ^
+        "\t" ^ ".one_arg: \n" ^
         "\t" ^ ".create_opt_list: \n" ^
         "\t\t" ^ "cmp r12, r14 ; new counter end of loop \n" ^
         "\t\t" ^ "je .done_create_opt_list \n" ^
         "\t\t" ^ "mov r8, PVAR(r12)\n" ^
         "\t\t" ^ "dec r12\n" ^ 
-        "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ;;; List of Opt args, into rax\n" ^
+        "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ; List of Opt args, into rax\n" ^
         "\t\t" ^ "mov r9, rax\n" ^
         "\t\t" ^ "jmp .create_opt_list \n" ^
         "\t" ^ ".done_create_opt_list: \n" ^
-        "\t" ^ "mov rax, r9 ;; if bo params, so, rax will got r9, that is originally, nil \n" ^
-        "\t" ^ ";;; Put list (rax) in last param location\n" ^
+        "\t" ^ "mov rax, r9 ; if no params, so, rax will got r9, that is originally, nil \n" ^
+        "\t" ^ ";; Put list (rax) in last param location \n" ^
         "\t" ^ "mov r10, rbp\n" ^
         "\t" ^ "add r13, 0 \n" ^
         "\t" ^ "shl r13, 3 \n" ^

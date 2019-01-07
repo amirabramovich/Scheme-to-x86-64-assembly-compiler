@@ -1362,6 +1362,37 @@ apply:
     leave
     ret
 
+
+*****
+
+lambdaOpt
+
+.........
+
+    cmp r13, 0 ; Variadic case 
+	jne .non_variadic ; 
+	
+    sub r12, 1 ; go to prev param 
+	sub r14, 1 ; let us do one more loop 
+	
+    .non_variadic: 
+
+    cmp r13, 2
+    jl .one_arg
+    add r12, 1 ;;; ? ;;;; 1
+    add r14, 1 ;;; ? ;; 0
+
+    .one_arg:
+
+	.create_opt_list: 
+		cmp r12, r14 ; new counter end of loop 
+		je .done_create_opt_list 
+		mov r8, PVAR(r12)
+		dec r12
+		MAKE_PAIR(rax, r8, r9) ;;; List of Opt args, into rax
+		mov r9, rax
+
+    ............
     
 *****
 

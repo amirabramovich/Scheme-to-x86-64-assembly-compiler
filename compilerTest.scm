@@ -364,7 +364,167 @@
             ;; x_3
         
 
-        ;; (append '((1 2) (3 4)) '((5 6) (7 8)) '(((9 10) '(11 12))))
-        ;; (append '() '())
+;; (append '((1 2) (3 4)) '((5 6) (7 8)) '(((9 10) '(11 12))))
+
+;; (append '() '()) ; (), pass
+;; (append '(1) '()) ; (1)
+                  ; fault
+
+;; (append '() '(1)) ; (1), pass
+                  ; (1)
+
+;;  (append '(1) '(1)) ; (1 1)
+                    ; fault
+
+((lambda (a lst . b)
+     (a lst b))
+        cons '(1) 2 3 4 '(9) 'hello) ; ((1) 2 3 4 (9) hello)
+;;                                                              ; ((1) (1) 2 3 4 (9))
+;;((1) 2 3 4 (9) hello)
+
+;; fixed
+
+;;                                                              ; "forgot" last elem
+
+;; ((lambda (a lst . b)
+;;      (a lst b))
+;;         cons 'lst 'b) ; (lst b)
+        ;; fixed
+;;                       ; (lst lst)
+
+;; where |args| = 1,
+;; arg and opt, sent correctly.
+
+;; ((lambda (a . b)
+;;     (cons a b))
+;;         'a 'b) ; (a b)
+                  ; (a b)
+
+;; ((lambda (func a . b)
+;;     (func a b))
+;;         cons 'a 'b) ; (a b)
+;;                     ; (a b)
+
+                    ;; fixed
+
+;; ((lambda (a b . c)
+;;     (if a b c))
+;;         #f 'b 'c) ; (c)
+                  ; (c)
+                  ;;fixed
+
+;; ((lambda (a b . c)
+;;     (if a c c))
+;;         #f 'b 'c) ; (c)
+
+;; fixed
+
+                  ; (b)
+                  ; where |args| > 1
+                  ; opt param got 'b (the last arg param)
+                  ; and not 'c (the opt param)
+                  ; try to give opt the next PVAR(current + 1)
+                  ; if current is the PVAR that "sent" now
+                  ; the problem is, that the last arg is sent as "opt"
+                  ; and "covered" by "pair" (two ()).
+
+                  ; so I will check,
+                  ; if |args| < 3 (include magic) jmp next (to the original code)
+                  ; cmp rcx, 3
+                  ; jl .continue
+                  ; otherwise, I will inc the register of idx of opt in PVAR
+                  ; 
+
+
+;; another example
+;; ((lambda (a b . c)
+;;     (if a b b))
+;;         #f 'b 'c) ; b
+                  ; b
+                  ; but, we can see that the last arg sent correctly.
+
+;; ((lambda (a . b)
+;;     (if #f a b))
+;;         'a 'b) ; (b)
+;;                ; (b)
+
+;; ((lambda (a . b)
+;;     (if #t a b))
+;;         'a 'b) ; a
+;;                ; a
 
 ;; (apply list '(1 2)) ;; (1 2)
+;; (apply list '(1 2 3)) ;; (1 2 3)
+
+;; (apply + '(1 2)) ;; 3
+
+;; `(1 2) ; (1 2)
+
+;; `(1 ,@'(2)) ; (1 2)
+            ; failed
+
+;; `(1 ,@'()) ; (1)
+            ; failed
+
+;; `(1 ,@'(1)) ; (1 1)
+            ; fail
+
+;; `(1 ,@`(1)) ; (1 1)
+            ; fail
+
+
+;; `(1 '()) ; (1 '())
+; (1 (quote ()))
+
+;; `(1 `()) ; (1 `())
+; (1 (quasiquote ()))
+
+;; `(1 `(1 2)) ; (1 `(1 2))
+; (1 (quasiquote (1 2)))
+
+
+;; '(1 `(1)) ; (1 `(1))
+         ; (1 (quasiquote (1)))
+
+;; '(1 ,@`(1)) ; (1 ,@`(1))
+; (1 (unquote-splicing (quasiquote (1))))
+
+;; '(1 ,@'(1)) ; (1 ,@'(1))
+; (1 (unquote-splicing (quote (1))))
+
+; Test N155
+;; (define x1 (lambda y y))           
+;; (define x2 (lambda (y1 . y2) `(y1 ,@y2)))        
+; (define x3 (lambda (y1 y2 . y3) `(y1 y2 ,@y3)))
+; (define x4 (lambda (y1 y2 y3 . y4) `(y1 y2 y3 ,@y4))) 
+; (define x5 (lambda (y1 y2 y3 y4 . y5) `(y1 y2 y3 y4 ,@y5))) 
+; (define x6 (lambda (y1 y2 y3 y4 y5 . y6) `(y1 y2 y3 y4 y5 ,@y6))) 
+
+;; (x1) ; ()
+;; (x2 1 2 3 4 5 6 7 8 9 10) ; (y1 2 3 4 5 6 7 8 9 10)
+; (x3 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
+; (x4 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30)
+; (x5 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
+; (x6 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50)
+
+; Test N222
+;;  (define x (lambda (x1 x2 x3 x4 x5 x6 x7 x8 x9 . x10)
+;;  (lambda (y1 y2 y3 y4 y5 y6 y7 y8 y9 . y10) 
+;;  (lambda (z1 z2 z3 z4 z5 z6 z7 z8 z9 . z10) 
+;;  (lambda (k1 k2 k3 k4 k5 k6 k7 k8 k9 . k10) 
+;;  (lambda (l1 l2 l3 l4 l5 l6 l7 l8 l9 . l10) 
+;;  (lambda (h1 h2 h3 h4 h5 h6 h7 h8 h9 . h10) 
+;;  `(,x1 ,x2 ,x3 ,x4 ,x5 ,x6 ,x7 ,x8 ,x9 ,@x10 
+;;  ,y1 ,y2 ,y3 ,y4 ,y5 ,y6 ,y7 ,y8 ,y9 ,@y10
+;;  ,z1 ,z2 ,z3 ,z4 ,z5 ,z6 ,z7 ,z8 ,z9 ,@z10
+;;  ,k1 ,k2 ,k3 ,k4 ,k5 ,k6 ,k7 ,k8 ,k9 ,@k10
+;;  ,l1 ,l2 ,l3 ,l4 ,l5 ,l6 ,l7 ,l8 ,l9 ,@l10
+;;  ,h1 ,h2 ,h3 ,h4 ,h5 ,h6 ,h7 ,h8 ,h9 ,@h10))))))))
+
+;;  ((((((x 1 2 3 4 5 6 7 8 9 10) 11 12 13 14 15 16 17 18 19 20 -11) 21 22 23 24 25 26 27 28 29 30 -30 -31) 31 32 33 34 35 36 37 38 39 40 -40 -41 -42 -43) 41 42 43 44 45 46 47 48 49 50 -50 -51 -52 -53 -54 -55 -56) 51 52 53 54 55 56 57 58 59 60 -55 -66 -77 -88 -99 -100) 
+
+
+; Test N223
+; (define x (lambda x10 (lambda y10 (lambda z10 (lambda k10 (lambda l10 (lambda h10 
+;     `(,@x10 ,@y10 ,@z10 ,@k10 ,@l10 ,@h10))))))))
+; ((((((x 1 2 3 4 5 6 7 8 9 10) 11 12 13 14 15 16 17 18 19 20 -11) 21 22 23 24 25 26 27 28 29 30 -30 -31) 31 32 33 34 35 36 37 38 39 40 -40 -41 -42 -43) 41 42 43 44 45 46 47 48 49 50 -50 -51 -52 -53 -54 -55 -56) 51 52 53 54 55 56 57 58 59 60 -55 -66 -77 -88 -99 -100)

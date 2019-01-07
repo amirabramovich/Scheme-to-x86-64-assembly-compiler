@@ -1355,7 +1355,86 @@ let c47  = (run_semantics (tag_parse_expression (read_sexpr "
 ((lambda (a . c)
     c) 1)
     ")));;
-
+    
 let c48  = (run_semantics (tag_parse_expression (read_sexpr "
     ((lambda y y))
     ")));;
+
+let c49 = (run_semantics (tag_parse_expression (read_sexpr "
+    `(1 ,@'())
+    ")));;
+    (* Applic' (Var' (VarFree "cons"),
+    [Const' (Sexpr (Number (Int 1)));
+     Applic' (Var' (VarFree "append"),
+      [Const' (Sexpr Nil); Const' (Sexpr Nil)])]) *)
+
+let c50 = (run_semantics (tag_parse_expression (read_sexpr "
+      (lambda (y1 . y2) `(y1 ,@y2))
+      ")));;
+      (*  LambdaOpt' (["y1"], "y2",
+   ApplicTP' (Var' (VarFree "cons"),
+    [Const' (Sexpr (Symbol "y1"));
+     Applic' (Var' (VarFree "append"),
+      [Var' (VarParam ("y2", 1)); Const' (Sexpr Nil)])])) *)
+
+let c51 = (run_semantics (tag_parse_expression (read_sexpr "
+      (define append
+    (let ((null? null?) (car car) (cdr cdr) (cons cons))
+      (lambda args
+        ((letrec ((f (lambda (ls args)
+                       (if (null? args)
+                           ls
+                           ((letrec ((g (lambda (ls)
+                                          (if (null? ls)
+                                              (f (car args) (cdr args))
+                                              (cons (car ls) (g (cdr ls)))))))
+                              g) ls)))))
+           f) '() args))))
+           ")));;
+           (*   Def' (Var' (VarFree "append"),
+   Applic'
+    (LambdaSimple' (["null?"; "car"; "cdr"; "cons"],
+      LambdaOpt' ([], "args",
+       ApplicTP'
+        (Applic'
+          (LambdaSimple' (["f"],
+            Seq'
+             [Set' (Var' (VarParam ("f", 0)), Box' (VarParam ("f", 0)));
+              Seq'
+               [BoxSet' (VarParam ("f", 0),
+                 LambdaSimple' (["ls"; "args"],
+                  If'
+                   (Applic' (Var' (VarBound ("null?", 2, 0)),
+                     [Var' (VarParam ("args", 1))]),
+                   Var' (VarParam ("ls", 0)),
+                   ApplicTP'
+                    (Applic'
+                      (LambdaSimple' (["g"],
+                        Seq'
+                         [Set' (Var' (VarParam ("g", 0)),
+                           Box' (VarParam ("g", 0)));
+                          Seq'
+                           [BoxSet' (VarParam ("g", 0),
+                             LambdaSimple' (["ls"],
+                              If'
+                               (Applic' (Var' (VarBound ("null?", 4, 0)),
+                                 [Var' (VarParam ("ls", 0))]),
+                               ApplicTP' (BoxGet' (VarBound ("f", 2, 0)),
+                                [Applic' (Var' (VarBound ("car", 4, 1)),
+                                  [Var' (VarBound ("args", 1, 1))]);
+                                 Applic' (Var' (VarBound ("cdr", 4, 2)),
+                                  [Var' (VarBound ("args", 1, 1))])]),
+                               ApplicTP' (Var' (VarBound ("cons", 4, 3)),
+                                [Applic' (Var' (VarBound ("car", 4, 1)),
+                                  [Var' (VarParam ("ls", 0))]);
+                                 Applic' (BoxGet' (VarBound ("g", 0, 0)),
+                                  [Applic' (Var' (VarBound ("cdr", 4, 2)),
+                                    [Var' (VarParam ("ls", 0))])])]))));
+                            BoxGet' (VarParam ("g", 0))]]),
+                      [Const' (Sexpr (Symbol "whatever"))]),
+                    [Var' (VarParam ("ls", 0))]))));
+                BoxGet' (VarParam ("f", 0))]]),
+          [Const' (Sexpr (Symbol "whatever"))]),
+        [Const' (Sexpr Nil); Var' (VarParam ("args", 0))]))),
+    [Var' (VarFree "null?"); Var' (VarFree "car"); Var' (VarFree "cdr");
+     Var' (VarFree "cons")])) *)
