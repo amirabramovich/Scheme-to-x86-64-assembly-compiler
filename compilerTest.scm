@@ -4,12 +4,13 @@
 
 ;; ;; Const
 ;; "Const"
-;; (eq? 1 1) ; .c1. int
-;; (eq? 2.2 2.2) ; .c2. float
-;; (eq? 'c 'c) ; .c3. quote
-;; (eq? "" "str") ; .c4. string
-;; (eq? '(1 2) '(1 2)) ; .c5. pair
-;; (eq? '(1 2 3 4) '(1 2 3 4)) ; .c6. pair
+;; 1 ; .c1. int
+;; 2.2 ; .c2. float
+;; 'c ; .c3. quote
+;; "str" ; .c4. string
+;; '(1 2) ; .c5. pair
+;; '(1 2 3 4) ; .c6. pair
+;; pass
 ;; "----------------------"
 
 
@@ -18,8 +19,9 @@
 ;; (eq? (if #t #t #f) #t) ; .i1. #t
 ;; (eq? (if #f 0 1) 1) ; .i2. 1
 ;; (eq? (cond (#f 1) 
-;;     (#f 1 2)
-;;       (else #t 1 0)) 0) ; .i3. 0
+    ;; (#f 1 2)
+    ;;   (else #t 1 0)) 0) ; .i3. 0
+;;   pass
 ;; "----------------------"
 
 
@@ -27,24 +29,27 @@
 ;; "Or"
 ;; (eq? (or #f #f) #f); .o1. #f
 ;; (eq? (or 1 0 2) 1) ; .o2. 1
+;; pass
 ;; "----------------------"
 
 
 ;; ;; And
 ;; "And"
 ;; (and 1 2 3) ; .a1. 3
+;; pass
 ;; "----------------------"
 
 
-;; ;; Seq
-;; ;; "Seq"
-;; ;; ((lambda ()      
-;; ;;       (begin
-;; ;;         (+ 1 2)
-;; ;;       (+ 3 4)
-;; ;;       (* 1 2))
-;; ;;         )) ; .s1. 2
-;; ;; "----------------------"
+;; Seq
+;; "Seq"
+;; ((lambda ()      
+;;       (begin
+;;         (+ 1 2)
+;;       (+ 3 4)
+;;       (* 1 2))
+;;         )) ; .s1. 2
+;; pass
+;; "----------------------"
 
 
 ;; ;; Define
@@ -53,6 +58,7 @@
 ;; y ; (1 . 2)
 ;; (define x (+ 1 2)) ; .d2.
 ;; x ; 3
+;; all test pass
 ;; "----------------------"
 
 
@@ -82,12 +88,14 @@
 ;;         (set! x 2)
 ;;         x))
 ;;         ) 1) ; .s5. 2, VarBound, Set, works
+
+;; all tests pass
 ;; "----------------------"
 
 
 ;; ;; Lambda
 ;; "Lambda"
-;; ;; (eq? ((lambda (x) x) 1) 1) ; .l1. 1
+;; (eq? ((lambda (x) x) 1) 1) ; .l1. 1
 ;; ((lambda (x) (+ x x)) 1) ; .l2. 2
 ;; ((lambda (x y) (+ x y)) 1 2) ; .l3. 3
 ;; ((lambda ()
@@ -99,7 +107,8 @@
 ;;             (+ 2 2)))
 ;;             1
 ;;             )
-;;             )) ; .l5. 5
+;;             )) ; .l5. 5, failed
+
 ;; ((lambda ()
 ;;         (+
 ;;         ((lambda ()
@@ -107,7 +116,8 @@
 ;;             ((lambda ()
 ;;                 2))
 ;;             )
-;;             )) ; .l6. 6
+;;             )) ; .l6. 6, failed
+
 ;; ((lambda ()
 ;;         ((lambda ()
 ;;             ((lambda ()
@@ -115,6 +125,8 @@
 ;;             ))
 ;;                 ))
 ;;                     )) ; .l7. 7
+
+;; all passed, tests l5, l6 failed
 ;; "----------------------"
 
 
@@ -154,7 +166,7 @@
 ;;     ) 6 3 4) ; .l_9. 9
 
 ;; TODO: add more complicated cases of LambdaOpt', check it, and fix code if needed
-
+;; all tests passed
 ;; "----------------------"
 
 
@@ -195,6 +207,7 @@
 ;; (let ((x 1)
 ;;         (y 2))
 ;;     (+ x y)) ; .a6. 3
+;; all tests passed
 ;; "----------------------"
 
 
@@ -214,13 +227,15 @@
 ;; (define foo (lambda (x y) 
 ;;             (cons x ((lambda () 
 ;;                         (set! x y)
-;;                         y)
-;;                         )))) ; .a_5.
+;;                         y))
+;;                         ))) ; .a_5.
 ;; (foo 0 1) ; (0 . 1), Failed
+;;              ; (1 . 1)
 
-;; ((lambda () (+ 1 2))) ; .a_6.
+;; ((lambda () (+ 1 2))) ; .a_6. 3
 
 ;; TODO: add more complicated cases of ApplicTP', and fix if needed
+;; all pass, a5 failed
 ;; "----------------------"
 
 
@@ -232,11 +247,11 @@
 ;;     x
 ;;         ) 1) ; .b1. 1, VarParam, BoxGet', Fixed
 
-;; ;; ((lambda (x)
-;; ;;     ((lambda ()
-;; ;;         (set! x 2)))
-;; ;;     x
-;; ;;         ) 1) ; .b2. 2, Param- BoxGet', Bound- BoxSet', Failed
+;; ((lambda (x)
+;;     ((lambda ()
+;;         (set! x 2)))
+;;     x
+;;         ) 1) ; .b2. 2, Param- BoxGet', Bound- BoxSet', Failed
 
 ;; ((lambda (x)
 ;;     (set! x 3)
@@ -264,25 +279,29 @@
 ;;     ((lambda (z)
 ;;         (set! x z)
 ;;         x) 2)))
-;;             1 2) ; .b6. 1, Failed
+;;             1 2) ; .b6. 1, 
 
 ;; ((lambda (x)
 ;;     (lambda ()
 ;;         (set! x 3))
 ;;     (if x #f #t)
-;;             x) 1) ; .b7. 1 (VarParam, Box', BoxGet'), TODO: check where first fail
+;;             x) 1) ; .b7. 1 (VarParam, Box', BoxGet'), 
 
-;; ;; TODO: fix test that fails & check another cases of Box', and fix Box' if needed
+;; ;; All pass, b5 failed
 ;; "----------------------"
 
 
 ;; "*** End of tests ***"
+
+
 
 ;; ;; Done:
 ;; ;; .1. add names to each test (e.g c1 for const test, in number 1).
 ;; ;; TODO:
 ;; ;; .1. find way to check each expression (equal? or another function of compare).
 ;; ;; .2. find way to concat all tests of each type together, and all tests together (list & equal? not supported yet).
+
+
 
 
 ;; ((lambda y y) 1 2 3) ; (1 2 3)
@@ -348,4 +367,4 @@
         ;; (append '((1 2) (3 4)) '((5 6) (7 8)) '(((9 10) '(11 12))))
         ;; (append '() '())
 
-(apply list '(1 2)) ;; (1 2)
+;; (apply list '(1 2)) ;; (1 2)
