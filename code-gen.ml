@@ -86,8 +86,9 @@ module Code_Gen : CODE_GEN = struct
     let lst_string = List.map (fun s -> "const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl)) vec in
     String.concat ", " lst_string;;
 
-  let str_const str tbl = 
-    let str = string_to_list str in
+  (* Helper functiom, support for special chars *)
+  let str_const str = 
+    let str = string_to_list str in (* remove tbl from signature *)
     let lst_string = List.map (fun ch -> string_of_int (Char.code ch)) str in
     String.concat ", " lst_string;; 
 
@@ -99,7 +100,7 @@ module Code_Gen : CODE_GEN = struct
         | Bool _ | Nil -> cons_tbl cdr tbl addr
         | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ string_of_int (Char.code ch) ^ ") ; my address is " ^ 
             (string_of_int addr)))]) (addr + size_of car)
-        | String str -> cons_tbl cdr (tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str tbl ^ " ; my address is " ^ 
+        | String str -> cons_tbl cdr (tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str ^ " ; my address is " ^ 
             (string_of_int addr)))]) (addr + size_of car)
         | Number(Int num) ->
             cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
@@ -159,11 +160,10 @@ module Code_Gen : CODE_GEN = struct
      "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
      "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
-     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons"
+     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons";
+     "apply", "apply"
      ];;
      
-  (* TODO: implement apply (variadic) *)
-
   let first (x, y) = x;;
 
   let saved_fvars = List.map first primitive_names_to_labels;;
@@ -347,15 +347,15 @@ module Code_Gen : CODE_GEN = struct
                     String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
                     "\t" ^ "LexitOr" ^ (string_of_int current) ^ ":\n"
     | If'(test, dit, dif) -> let current = !count in
-                              count := !count + 1;
-                              (generate consts fvars test) ^ (* generate test *)
-                              "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
-                              "\t" ^ "je Lelse" ^ (string_of_int current) ^ "\n" ^ (* Lelse of current (number) If' *)
-                              (generate consts fvars dit) ^ (* generate dit *)
-                              "\t" ^ "jmp LexitIf" ^ (string_of_int current) ^ "\n" ^
-                              "\t" ^ "Lelse" ^ (string_of_int current) ^ ":\n" ^
-                              (generate consts fvars dif) ^ 
-                              "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
+                             count := !count + 1;
+                             (generate consts fvars test) ^ (* generate test *)
+                             "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
+                             "\t" ^ "je Lelse" ^ (string_of_int current) ^ "\n" ^ (* Lelse of current (number) If' *)
+                             (generate consts fvars dit) ^ (* generate dit *)
+                             "\t" ^ "jmp LexitIf" ^ (string_of_int current) ^ "\n" ^
+                             "\t" ^ "Lelse" ^ (string_of_int current) ^ ":\n" ^
+                             (generate consts fvars dif) ^ 
+                             "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
     | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ "\n" ^ 
                                    "\t" ^ "mov rax, qword [rax]" ^ "\n"
     | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ "\n" ^
@@ -392,7 +392,7 @@ module Code_Gen : CODE_GEN = struct
         let len = !prev_args in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
-    | Applic'(op, args) | ApplicTP'(op, args) -> 
+    | Applic'(op, args) -> 
         let args = List.rev args in
         let len = List.length args in
         let current = !count in
@@ -418,28 +418,28 @@ module Code_Gen : CODE_GEN = struct
         "\n\t" ^ "mov rax, const_tbl + 1 ; applic \n" ^
         "\t" ^ "push rax ; Nil as Magic \n" ^
         (applic_rec args)
-    | ApplicTP'(op, args) -> let args = List.rev args in
-                              let len = List.length args in
-                              let rec applicTP_rec args =
-                              match args with
-                              | car :: cdr -> 
-                              (generate consts fvars car) ^ 
-                              "\tpush rax\n" ^ 
-                              applicTP_rec cdr
-                              | [] -> 
-                              "\tpush "^(string_of_int len)^" ; parsing of operator below:\n"^
-                              (generate consts fvars op)^
-                              "\tmov r9, [rax+TYPE_SIZE] ; closure's env\n"^
-                              "\tpush r9 ; push env\n"^
-                              "\tpush qword [rbp + 8] ; old ret addr\n"^
-                              "\tmov r9, qword[rbp]\n"^
-                              "\tSHIFT_FRAME "^(string_of_int (len+5))^"\n"^
-                              "\tmov rbp, r9\n"^
-                              "\tjmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n"
-                              in 
-                              "\tmov rax, 9999 ; begin applicTP\n"^
-                              "\tpush rax\n"^
-                              (applicTP_rec args)
+    | ApplicTP'(op, args) -> 
+        let args = List.rev args in
+        let len = List.length args in
+        let rec applicTP_rec args =
+          match args with
+            | car :: cdr -> 
+              (generate consts fvars car) ^ 
+              "\t" ^ "push rax \n" ^ 
+              applicTP_rec cdr
+            | [] -> 
+              "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; number of arguments \n" ^
+              "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n"^
+              (generate consts fvars op) ^
+              "\t" ^ "mov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
+              "\t" ^ "push r9 ; push env\n" ^
+              "\t" ^ "push qword [rbp + 8] ; old ret addr \n" ^
+              "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
+              "\t" ^ "jmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code \n"
+        in 
+        "\t" ^ "mov rax, const_tbl + 1 ;  applic tail position \n" ^
+        "\t" ^ "push rax \n" ^
+        (applicTP_rec args)
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;

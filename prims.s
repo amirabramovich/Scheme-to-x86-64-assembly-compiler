@@ -1,3 +1,44 @@
+apply:
+    push rbp
+    mov rbp, rsp
+
+    mov r9, PVAR(0) ;; proc
+    mov r8, PVAR(1) ;; pair
+
+    mov r12, 1 ;; counter <nargs>, count from first arg
+    mov r13, const_tbl + 1  ;; for cmp in loop
+
+    .push_elems:
+
+	CAR r10, r8 ;; r10 got car
+    CDR r11, r8 ;; r11 got cdr
+
+    push r10 ;; push car
+    mov r8, r11 ;; old cdr is new list
+    add r12, 1 ;; inc <nargs> counter
+
+    cmp r11, r13
+    jne .push_elems
+
+    push r12 ;; num args
+
+    mov rax, r9 ;; proc ptr
+    mov rbx, [rax+TYPE_SIZE] ;; env
+	push rbx ;; push env
+	mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ;; code
+	call rbx ;; call code (code of closure)
+
+    add rsp, 8 ;; add num args
+    pop rbx ;; pop args count
+    shl r12, 3 ;; 8 * <nargs>
+    add rsp, r12 ;; add the size of args
+  
+
+.return:
+    leave
+    ret
+
+
 
 is_boolean:
     push rbp
