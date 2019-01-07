@@ -1,24 +1,24 @@
 
 ;; Should work
 
-;; (define append
-;;     (let ((null? null?) (car car) (cdr cdr) (cons cons))
-;;       (lambda args
-;;         ((letrec ((f (lambda (ls args)
-;;                        (if (null? args)
-;;                            ls
-;;                            ((letrec ((g (lambda (ls)
-;;                                           (if (null? ls)
-;;                                               (f (car args) (cdr args))
-;;                                               (cons (car ls) (g (cdr ls)))))))
-;;                               g) ls)))))
-;;            f) '() args))))
+(define append
+    (let ((null? null?) (car car) (cdr cdr) (cons cons))
+      (lambda args
+        ((letrec ((f (lambda (ls args)
+                       (if (null? args)
+                           ls
+                           ((letrec ((g (lambda (ls)
+                                          (if (null? ls)
+                                              (f (car args) (cdr args))
+                                              (cons (car ls) (g (cdr ls)))))))
+                              g) ls)))))
+           f) '() args))))
 
 ;; (define zero? 
 ;;   (let ((= =))
 ;;     (lambda (x) (= x 0))))
 
-(define list (lambda x x))
+;; (define list (lambda x x))
 
 ;; (define list? 
 ;;   (let ((null? null?) (pair? pair?) (cdr cdr))
@@ -95,7 +95,7 @@
 ;;;;;;;;;;;;
 ;;  did not check from here
 
-;; Should work
+;; ;; Should work
 
 ;; (define list->vector
 ;;   (let ((null? null?)(pair? pair?)(car car)(cdr cdr)(make-vector make-vector)(length length)(+ +))
@@ -123,10 +123,10 @@
 
 ;; Not work 
 
-; (define +
-;   (let ((null? null?)(+ +)(car car)(apply apply)(cdr cdr))
-;     (letrec ((loop (lambda x (if (null? x) 0 (+ (car x) (apply loop (cdr x)))))))
-;       loop)))
+;;  (define +
+;;    (let ((null? null?)(+ +)(car car)(apply apply)(cdr cdr))
+;;      (letrec ((loop (lambda x (if (null? x) 0 (+ (car x) (apply loop (cdr x)))))))
+;;        loop)))
 
 ; (define *
 ;   (let ((null? null?)(* *)(car car)(apply apply)(cdr cdr))

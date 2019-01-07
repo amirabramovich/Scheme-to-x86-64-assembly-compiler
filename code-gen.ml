@@ -238,10 +238,10 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n" ^
         (* Adjust stack for opt *)
-        "\t" ^ ";;; Closure body \n" ^ 
-        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| ;;;;; mov r13, <nParams>\n" ^
-        "\t" ^ ";;;;; mov rcx, 1 ; |Args|\n" ^ 
-        "\t" ^ "sub rcx, r13 ; |Opt list|\n" ^
+        (* TODO: order in this code *)
+        "\t" ^ ";; Closure body \n" ^ 
+        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| \n" ^
+        "\t" ^ "sub rcx, r13 ; |Opt list| \n" ^
         "\t" ^ "mov r12, rcx\n" ^
         "\t" ^ "add r12, 0\n" ^
         "\t" ^ "mov r9, const_tbl + 1 ; Nil element \n" ^
@@ -251,24 +251,29 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "sub r12, 1 ; go to prev param \n" ^
         "\t" ^ "sub r14, 1 ; let us do one more loop \n" ^
         "\t" ^ ".non_variadic: \n" ^    
+        "\t" ^ "cmp r13, 2 \n" ^
+        "\t" ^ "jl .one_arg \n" ^
+        "\t" ^ "add r12, 1 \n " ^
+        "\t" ^ "add r14, 1 \n " ^
+        "\t" ^ ".one_arg: \n" ^
         "\t" ^ ".create_opt_list: \n" ^
         "\t\t" ^ "cmp r12, r14 ; new counter end of loop \n" ^
         "\t\t" ^ "je .done_create_opt_list \n" ^
         "\t\t" ^ "mov r8, PVAR(r12)\n" ^
         "\t\t" ^ "dec r12\n" ^ 
-        "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ;;; List of Opt args, into rax\n" ^
+        "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ; List of Opt args, into rax\n" ^
         "\t\t" ^ "mov r9, rax\n" ^
         "\t\t" ^ "jmp .create_opt_list \n" ^
         "\t" ^ ".done_create_opt_list: \n" ^
-        "\t" ^ "mov rax, r9 ;; if bo params, so, rax will got r9, that is originally, nil \n" ^
-        "\t" ^ ";;; Put list (rax) in last param location\n" ^
+        "\t" ^ "mov rax, r9 ; if no params, so, rax will got r9, that is originally, nil \n" ^
+        "\t" ^ ";; Put list (rax) in last param location \n" ^
         "\t" ^ "mov r10, rbp\n" ^
         "\t" ^ "add r13, 0 \n" ^
         "\t" ^ "shl r13, 3 \n" ^
         "\t" ^ "add r10, r13\n" ^
         "\t" ^ "add r10, 8 * 4 \n" ^
         "\t" ^ "mov [r10], rax \n" ^
-        "\t" ^ ";;;; Original body of closure.\n" ^
+        "\t" ^ ";; Original body of closure \n" ^
         (generate consts fvars body) ^ 
         "\t" ^ "leave ; done parsing lambdaOpt body above \n" ^
         "\t" ^ "ret\n" ^
@@ -312,16 +317,17 @@ module Code_Gen : CODE_GEN = struct
         "\t\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
 
     match e with
-    | Const' (expr) -> "\t" ^ "mov rax, const_tbl+" ^ (string_of_int (get_const_addr expr consts)) ^ " ; mov rax, AddressInConstTable\n"
+    | Const' (expr) -> "\t" ^ "mov rax, const_tbl+" ^ (string_of_int (get_const_addr expr consts)) ^ " ; Const \n"
     | Var'(VarFree v) -> "\t" ^ "mov rax, qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE]" ^
-                                                                                                       " ; put fvar v in rax register\n"
-    | Var'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ") ; mov rax, qword[rbp + 8 * (4 + minor)], pos (= minor) \n"
-    | Var'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; mov rax, qword[rbp + 8 * 2] \n" ^
+                                                                                                       " ; VarFree \n"
+    | Var'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ 
+                                " ; VarParam, mov rax, qword[rbp + 8 * (4 + minor)], pos (= minor) \n"
+    | Var'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; mov rax, qword[rbp + 8 * 2] ; VarBound \n" ^
                                        "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")" ^ " ; major is depth in this case \n" ^
                                        "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")" ^ " ; minor is pos in this case \n" 
     | Def'(Var'(VarFree(name)), expr) -> (generate consts fvars expr) ^ (* generate expr (= "value") *)
                                         "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr name fvars)) ^ "*WORD_SIZE], rax" ^  
-                                        ";; define case in generate func, the \"generated expr\" is in rax" ^ "\n" ^
+                                        "; define case in generate func, the \"generated expr\" is in rax" ^ "\n" ^
                                         "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n" 
     | Set'(Var'(VarFree(v)), expr) -> (generate consts fvars expr) ^ (* generate "Epsilon" (from Lecture) *)
                                         "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE], rax" ^ 
@@ -392,7 +398,7 @@ module Code_Gen : CODE_GEN = struct
         let len = !prev_args in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
-    | Applic'(op, args) -> 
+    | Applic'(op, args) | ApplicTP'(op, args) -> 
         let args = List.rev args in
         let len = List.length args in
         let current = !count in
@@ -419,6 +425,7 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "push rax ; Nil as Magic \n" ^
         (applic_rec args)
     | ApplicTP'(op, args) -> 
+        (* Idea: for apply, if op is <apply> => do not do (List.rev args), for push args in same order, in apply *)
         let args = List.rev args in
         let len = List.length args in
         let rec applicTP_rec args =
