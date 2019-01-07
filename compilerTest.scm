@@ -311,5 +311,41 @@
 ;; (voo 1 2 3) ;(2 3)
 
 
-((lambda ()
-            (boolean? #t))) ;; #t
+;; ((lambda ()
+;;             (boolean? #t))) ;; #t
+
+
+;; (define foo5
+;;     (lambda (x y)
+;;             (lambda () 
+;;                     "\n \r \f this is \n \r \f "
+;;                     (set! x 5)
+;;                     )
+;;             (lambda () x)
+;;                             ))
+;; ((foo5 1 2)) ;; 1
+   
+
+            ; Checking fvar_tbl working correctly 
+
+            
+            ;; (define x_0 0)
+            ;; (define x_1 1)
+            ;; (define x_2 2)
+            ;; (define x_3 3) 
+
+            ;; (set! x_0 -0)
+            ;; (set! x_1 -1)
+            ;; (set! x_2 -2)
+            ;; (set! x_3 -3)
+
+            ;; x_0
+            ;; x_1
+            ;; x_2
+            ;; x_3
+        
+
+        ;; (append '((1 2) (3 4)) '((5 6) (7 8)) '(((9 10) '(11 12))))
+        ;; (append '() '())
+
+(apply list '(1 2)) ;; (1 2)

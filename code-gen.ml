@@ -419,6 +419,7 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "push rax ; Nil as Magic \n" ^
         (applic_rec args)
     | ApplicTP'(op, args) -> 
+        (* Idea: for apply, if op is <apply> => do not do (List.rev args), for push args in same order, in apply *)
         let args = List.rev args in
         let len = List.length args in
         let rec applicTP_rec args =

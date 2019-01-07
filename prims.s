@@ -5,7 +5,7 @@ apply:
     mov r9, PVAR(0) ;; proc
     mov r8, PVAR(1) ;; pair
 
-    mov r12, 1 ;; counter <nargs>, count from first arg
+    mov r12, 0 ;; counter <nargs>, count from first arg
     mov r13, const_tbl + 1  ;; for cmp in loop
 
     .push_elems:
@@ -19,6 +19,25 @@ apply:
 
     cmp r11, r13
     jne .push_elems
+
+    ;; reverse elems
+    ;; this implemetation is work now without loop (basic case for 2 elems)
+    ;; for more elems, we need to support first at more elems in apply
+    ;; n = n - 2, at each iteration (at first, n = <nArgs> = r12)
+    pop rax ;; first elem
+    
+    ;; get to next elem to pop (to swap)
+    mov r8, r12 ;; n
+    sub r8, 2 ;; n-2
+    shl r8, 3 ;; (n-2)*8
+    add rsp, r8 ;; add rsp, (n-2)*8 ;; this is the "offset" between 2 elems of curr swap.
+    
+    pop rbx ;; sec elem
+    push rax ;; first step of swap 
+
+    sub rsp, r8 ;; go to first elem loc
+    push rbx ;; second step of swap
+
 
     push r12 ;; num args
 

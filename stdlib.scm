@@ -95,7 +95,7 @@
 ;;;;;;;;;;;;
 ;;  did not check from here
 
-;; Should work
+;; ;; Should work
 
 ;; (define list->vector
 ;;   (let ((null? null?)(pair? pair?)(car car)(cdr cdr)(make-vector make-vector)(length length)(+ +))
@@ -123,10 +123,10 @@
 
 ;; Not work 
 
-; (define +
-;   (let ((null? null?)(+ +)(car car)(apply apply)(cdr cdr))
-;     (letrec ((loop (lambda x (if (null? x) 0 (+ (car x) (apply loop (cdr x)))))))
-;       loop)))
+;;  (define +
+;;    (let ((null? null?)(+ +)(car car)(apply apply)(cdr cdr))
+;;      (letrec ((loop (lambda x (if (null? x) 0 (+ (car x) (apply loop (cdr x)))))))
+;;        loop)))
 
 ; (define *
 ;   (let ((null? null?)(* *)(car car)(apply apply)(cdr cdr))
