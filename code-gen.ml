@@ -392,7 +392,7 @@ module Code_Gen : CODE_GEN = struct
         let len = !prev_args in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
-    | Applic'(op, args) | ApplicTP'(op, args) -> 
+    | Applic'(op, args) -> 
         let args = List.rev args in
         let len = List.length args in
         let current = !count in
@@ -435,9 +435,7 @@ module Code_Gen : CODE_GEN = struct
               "\t" ^ "mov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
               "\t" ^ "push r9 ; push env\n" ^
               "\t" ^ "push qword [rbp + 8] ; old ret addr \n" ^
-              "\t" ^ "mov r9, qword[rbp] ; curr frame \n" ^
               "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
-              "\t" ^ "mov rbp, r9\n" ^
               "\t" ^ "jmp [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code \n"
         in 
         "\t" ^ "mov rax, const_tbl + 1 ;  applic tail position \n" ^

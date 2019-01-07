@@ -114,7 +114,8 @@ dq %1
 ; prev version of shift frame
 %macro SHIFT_FRAME 1 ; %1 = size of frame (constant) ; 
 	push rax
-	mov rax, PARAM_COUNT
+	mov r9, PARAM_COUNT
+	mov rax, r9
 	add rax, 5
 %assign i 1
 %rep %1
@@ -124,7 +125,7 @@ dq %1
 %assign i i+1
 %endrep
 	pop rax
-	mov r8, PARAM_COUNT
+	mov r8, r9
 	add r8, 5
 	shl r8, 3
 	add rsp, r8
