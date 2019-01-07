@@ -229,7 +229,7 @@
 ;;                         (set! x y)
 ;;                         y))
 ;;                         ))) ; .a_5.
-;; (foo 0 1) ; (0 . 1), Failed
+;; (foo 0 1) ; (0 . 1), maybe OK, 
 ;;              ; (1 . 1)
 
 ;; ((lambda () (+ 1 2))) ; .a_6. 3
@@ -364,21 +364,22 @@
             ;; x_3
         
 
-;; (append '((1 2) (3 4)) '((5 6) (7 8)) '(((9 10) '(11 12))))
+;; (append '((1 2) (3 4)) '((5 6) (7 8)) '(((9 10) '(11 12)))) ; ((1 2) (3 4) (5 6) (7 8) ((9 10) '(11 12)))
+;;                                                             ; ((1 2) (3 4) (5 6) (7 8) ((9 10) (quote (11 12))))
 
 ;; (append '() '()) ; (), pass
 ;; (append '(1) '()) ; (1)
-                  ; fault
+                  ; (1) , pass with Applic assembly code, for ApplicTP expr'
 
 ;; (append '() '(1)) ; (1), pass
                   ; (1)
 
 ;;  (append '(1) '(1)) ; (1 1)
-                    ; fault
+                    ; pass with applic assembly code for applic tp expr'
 
-((lambda (a lst . b)
-     (a lst b))
-        cons '(1) 2 3 4 '(9) 'hello) ; ((1) 2 3 4 (9) hello)
+;; ((lambda (a lst . b)
+;;      (a lst b))
+;;         cons '(1) 2 3 4 '(9) 'hello) ; ((1) 2 3 4 (9) hello)
 ;;                                                              ; ((1) (1) 2 3 4 (9))
 ;;((1) 2 3 4 (9) hello)
 
@@ -461,16 +462,17 @@
 ;; `(1 2) ; (1 2)
 
 ;; `(1 ,@'(2)) ; (1 2)
-            ; failed
+            ; (1 2), with applic assembly code for ApplicTP Expr'
+
 
 ;; `(1 ,@'()) ; (1)
-            ; failed
+            ; (1) , with Applic assmebly code for ApplicTP Expr'
 
 ;; `(1 ,@'(1)) ; (1 1)
-            ; fail
+            ; (1 1), with Applic assmebly code for ApplicTP Expr'
 
 ;; `(1 ,@`(1)) ; (1 1)
-            ; fail
+            ; (1 1), with Applic assmebly code for ApplicTP Expr'
 
 
 ;; `(1 '()) ; (1 '())
@@ -493,17 +495,28 @@
 ; (1 (unquote-splicing (quote (1))))
 
 ; Test N155
-;; (define x1 (lambda y y))           
-;; (define x2 (lambda (y1 . y2) `(y1 ,@y2)))        
-; (define x3 (lambda (y1 y2 . y3) `(y1 y2 ,@y3)))
-; (define x4 (lambda (y1 y2 y3 . y4) `(y1 y2 y3 ,@y4))) 
+
+
+
+
 ; (define x5 (lambda (y1 y2 y3 y4 . y5) `(y1 y2 y3 y4 ,@y5))) 
 ; (define x6 (lambda (y1 y2 y3 y4 y5 . y6) `(y1 y2 y3 y4 y5 ,@y6))) 
 
+;; (define x1 (lambda y y))                 
 ;; (x1) ; ()
+
+;; (define x2 (lambda (y1 . y2) `(y1 ,@y2)))  
 ;; (x2 1 2 3 4 5 6 7 8 9 10) ; (y1 2 3 4 5 6 7 8 9 10)
-; (x3 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
-; (x4 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30)
+                             ; (y1 2 3 4 5 6 7 8 9 10)
+
+
+;; (define x3 (lambda (y1 y2 . y3) `(y1 y2 ,@y3)))
+;; (x3 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20) ; (y1 y2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
+                                                        ; (y1 y2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
+
+;; (define x4 (lambda (y1 y2 y3 . y4) `(y1 y2 y3 ,@y4))) 
+;; (x4 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30)
+
 ; (x5 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)
 ; (x6 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50)
 
