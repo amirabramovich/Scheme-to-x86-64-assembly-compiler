@@ -1,1 +1,0 @@
-(if "dalit" "amazing" "shmena")
