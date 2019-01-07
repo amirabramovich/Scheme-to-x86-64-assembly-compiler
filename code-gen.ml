@@ -239,46 +239,45 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n" ^
         (* Adjust stack for opt *)
         (* TODO: order in this code *)
-        "\t" ^ ";; Closure body \n" ^ 
+        "\t" ^ ";; Closure Body \n" ^ 
         "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| \n" ^
-        "\t" ^ "sub rcx, r13 ; |Opt list| \n" ^
-        "\t" ^ "mov r12, rcx\n" ^
-        "\t" ^ "add r12, 0\n" ^
-        "\t" ^ "mov r9, const_tbl + 1 ; Nil element \n" ^
-        "\t" ^ "mov r14, 0 ; counter end of loop \n" ^
-        "\t" ^ "cmp r13, 0 ; Variadic case \n" ^
-        "\t" ^ "jne .non_variadic ; \n" ^
-        "\t" ^ "sub r12, 1 ; go to prev param \n" ^
-        "\t" ^ "sub r14, 1 ; let us do one more loop \n" ^
-        "\t" ^ ".non_variadic: \n" ^    
-        "\t" ^ "cmp r13, 2 \n" ^
-        "\t" ^ "jl .one_arg \n" ^
-        "\t" ^ "add r12, 1 \n " ^
-        "\t" ^ "add r14, 1 \n " ^
-        "\t" ^ ".one_arg: \n" ^
+        "\t" ^ "mov r15, rcx ; <nArgs> \n" ^
+        "\t" ^ "add r15, -1 ; <nArgs> - 1 \n" ^
+	      "\t" ^ "mov r12, rcx ; Counter for loop \n" ^
+        "\t" ^ "sub r12, r13 ; <nArgs> - <nParams> = |Opt list| = 2 \n" ^
+        "\t" ^ "mov r9, const_tbl + 1 ; Nil, for first pair \n" ^
+        "\t" ^ "mov r14, 0 ; Comparator for loop condition \n" ^
+        "\t" ^ ";; TODO: check if this case is necessary \n" ^
+	      "\t" ^ "cmp r13, 0 ; <nParams> = 0, Variadic case \n" ^
+	      "\t" ^ "jne .non_variadic \n" ^
+	      "\t" ^ "sub r12, 1 \n" ^
+	      "\t" ^ "sub r14, 1 \n" ^
+        "\t" ^ ".non_variadic: \n" ^
+        "\t" ^ "cmp r13, 2 ; if |Params| < 2 \n" ^
+        "\t" ^ "jl .create_opt_list ; jump \n" ^
+        "\t" ^ "add r12, 1 ; Counter for loop \n" ^
+        "\t" ^ "add r14, 1 ; Comparator for loop condition \n" ^
         "\t" ^ ".create_opt_list: \n" ^
-        "\t\t" ^ "cmp r12, r14 ; new counter end of loop \n" ^
-        "\t\t" ^ "je .done_create_opt_list \n" ^
-        "\t\t" ^ "mov r8, PVAR(r12)\n" ^
-        "\t\t" ^ "dec r12\n" ^ 
-        "\t\t" ^ "MAKE_PAIR(rax, r8, r9) ; List of Opt args, into rax\n" ^
-        "\t\t" ^ "mov r9, rax\n" ^
-        "\t\t" ^ "jmp .create_opt_list \n" ^
+        "\t" ^ "cmp r12, r14 ; Loop condition \n" ^
+        "\t" ^ "je .done_create_opt_list \n" ^
+        "\t" ^ "mov r8, PVAR(r15) ;; CHANGED r15* \n" ^
+        "\t" ^ "add r15, -1 ; dec each iter \n" ^
+        "\t" ^ "dec r12 ; Loop counter \n" ^
+        "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
+        "\t" ^ "mov r9, rax ; Caten to next List \n" ^
+        "\t" ^ "jmp .create_opt_list \n" ^
         "\t" ^ ".done_create_opt_list: \n" ^
-        "\t" ^ "mov rax, r9 ; if no params, so, rax will got r9, that is originally, nil \n" ^
-        "\t" ^ ";; Put list (rax) in last param location \n" ^
-        "\t" ^ "mov r10, rbp\n" ^
-        "\t" ^ "add r13, 0 \n" ^
-        "\t" ^ "shl r13, 3 \n" ^
-        "\t" ^ "add r10, r13\n" ^
-        "\t" ^ "add r10, 8 * 4 \n" ^
-        "\t" ^ "mov [r10], rax \n" ^
-        "\t" ^ ";; Original body of closure \n" ^
+        "\t" ^ "mov rax, r9 ; By default Nil \n " ^
+        "\t" ^ "mov r10, rbp ; Put list in Opt loc \n" ^
+        "\t" ^ "shl r13, 3 ; <nParams> * 8 \n" ^
+        "\t" ^ "add r10, r13 ; rbp + <sizeParams> \n" ^
+        "\t" ^ "add r10, 8 * 4  \n" ^
+        "\t" ^ "mov [r10], rax ; Put list \n" ^
+        "\t" ^ ";; Original Closure Body \n" ^
         (generate consts fvars body) ^ 
         "\t" ^ "leave ; done parsing lambdaOpt body above \n" ^
         "\t" ^ "ret\n" ^
         "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
-
       (* Helper function, for generate LambdaOpt *)
       let assemOpt vars opt body curr_count curr_env len = 
         "\t" ^ "lambdaOpt" ^ (string_of_int curr_count) ^ ":\n" ^ 

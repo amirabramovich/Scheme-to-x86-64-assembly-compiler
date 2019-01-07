@@ -1395,6 +1395,60 @@ lambdaOpt
     ............
     
 *****
+;LambdaOpt
+
+	;; Closure Body 
+
+	mov r13, 3 ; |Params|
+
+    mov r15, rcx ;; ADDED ;; <nArgs>
+    add r15, -1 ;; ADDED ;; <nArgs> - 1
+
+	; sub rcx, r13 ;; REMOVED 
+	mov r12, rcx ; Counter for loop
+    sub r12, r13 ; <nArgs> - <nParams> = |Opt list| = 2
+	
+    ; add r12, 0 ;; REMOVED
+
+	mov r9, const_tbl + 1 ; Nil, for first pair
+	mov r14, 0 ; Comparator for loop condition
+
+    ;; TODO: check if this case is necessary
+	; cmp r13, 0 ; <nParams> = 0, Variadic case
+	; jne .non_variadic 
+	; sub r12, 1 ;; COMMENTED
+	; sub r14, 1 ;; COMMENTED
+
+	.non_variadic: 
+	cmp r13, 2 ; if |Params| < 2
+	jl .create_opt_list ; jump ;; CHANGED
+	add r12, 1 ; Counter for loop
+ 	add r14, 1 ; Comparator for loop condition
+
+ 	; .one_arg:  ;; REMOVED
+	.create_opt_list: 
+		cmp r12, r14 ; Loop condition
+		je .done_create_opt_list
+		mov r8, PVAR(r15) ;; CHANGED r15*
+        add r15, -1 ;; ADDED (dec each iter)
+		dec r12 ; Loop counter
+		MAKE_PAIR(rax, r8, r9) ; Make List
+		mov r9, rax ; Caten to next List
+		jmp .create_opt_list 
+
+	.done_create_opt_list: 
+	mov rax, r9 ; By default Nil
+
+	mov r10, rbp ; Put list in Opt loc
+	; add r13, 0 ;; REMOVED
+	shl r13, 3 ; <nParams> * 8
+	add r10, r13 ; rbp + <sizeParams>
+	add r10, 8 * 4 
+	mov [r10], rax ; Put list
+
+	; Original Closure Body
+
+*****
 
 
 
