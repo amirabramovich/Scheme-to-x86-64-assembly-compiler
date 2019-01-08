@@ -1519,8 +1519,55 @@ lamdda  simple
 
 *****
 
+        (* "\t" ^ "mov r15, rcx ; <nArgs> \n" ^ *)
+        "\t" ^ "mov r15, " ^ (string_of_int len) ^ " ; Start From Last Param \n" ^
+        (* "\t" ^ "add r15, -1 ; <nArgs> - 1 \n" ^ *)
+        "\t" ^ "mov r9, const_tbl + 1 ; Nil, for first pair \n\n" ^
+        "\t" ^ ".create_opt_list: \n " ^
+        "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param \n " ^
+        "\t" ^ "cmp r8, const_tbl+1 ;; If Magic, is Last Param \n" ^
+        "\t" ^ "je .done_create_opt_list \n" ^
+        "\t" ^ "add r15, 1 ; Dec each Iter \n" ^ (* Changed from -1 (start from first to last) *)
+        "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^ (* List will be now Reversed : | *)
+        "\t" ^ "mov r9, rax ; Caten to next List \n" ^
+        "\t" ^ "jmp .create_opt_list \n\n" ^    *)
+        
+
+        *************
 
 
+        
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    mov r14, 0 ;; C, <nParams>
+	mov r15, 0 ; Start From Last Param 
+	mov r9, const_tbl + 1 ; Nil, for first pair 
+
+	.get_opt_args: ;; C
+ 	mov r8, PVAR(r15) ; Index Of Curr Param  ;; C
+	add r15, 1 ; Dec each Iter 
+    cmp r8, const_tbl+1 ;; If Magic, is Last Param ;; C
+	je .create_opt_list ;; C 
+	; MAKE_PAIR(rax, r8, r9) ; Make List ;; C
+	; mov r9, rax ; Caten to next List ;; C
+	jmp .get_opt_args ;; C
+
+	; .done_create_opt_list: ;; C
+
+    mov r15, 1 ;;
+
+    .create_opt_list: 
+ 	mov r8, PVAR(r15) ; Index Of Curr Param  ;; C
+ 	cmp r15, r14 ;; If Magic, is Last Param 
+	je .done_create_opt_list ;; C
+	add r15, -1 ; Dec each Iter ;; C
+	MAKE_PAIR(rax, r8, r9) ; Make List ;; C
+	mov r9, rax ; Caten to next List ;; C
+	jmp .create_opt_list 
+
+    .done_create_opt_list:
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+******
 
 Helper compile-
 

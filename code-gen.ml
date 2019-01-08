@@ -235,27 +235,31 @@ module Code_Gen : CODE_GEN = struct
       let lcodeOpt vars opt body curr_count = 
         prev_params := List.length vars + 1;
         let len = List.length vars in
+        (* Explain: to Get Rev Args, Start by Count |<OptList>|, and then, caten Pairs from <EndOptList> to <StartOptList> *)
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n" ^
         "\t" ^ ";; Closure Body \n" ^ 
-        (* Explain change: Pushed Magic as Nil at end of Params to sign end of Params List of Opt *)
-        (* "\t" ^ "mov r15, rcx ; <nArgs> \n" ^ *)
-        "\t" ^ "mov r15, " ^ (string_of_int len) ^ " ; Start From Last Param \n" ^
-        (* "\t" ^ "add r15, -1 ; <nArgs> - 1 \n" ^ *)
-        "\t" ^ "mov r9, const_tbl + 1 ; Nil, for first pair \n\n" ^
-        "\t" ^ ".create_opt_list: \n " ^
-        "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param \n " ^
-        "\t" ^ "cmp r8, const_tbl+1 ;; If Magic, is Last Param \n" ^
-        "\t" ^ "je .done_create_opt_list \n" ^
-        "\t" ^ "add r15, 1 ; Dec each Iter \n" ^ (* Changed from -1 (start from first to last) *)
-        "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^ (* List will be now Reversed : | *)
-        "\t" ^ "mov r9, rax ; Caten to next List \n" ^
-        "\t" ^ "jmp .create_opt_list \n\n" ^    
+        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; Start From Last Param \n" ^
+        "\t" ^ "mov r15, r13 ; Save last Param Idx \n" ^
+	      "\t" ^ "mov r9, const_tbl + 1 ; Nil, for first pair \n" ^
+        "\t" ^ ".get_opt_args: \n" ^
+ 	      "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
+        "\t" ^ "cmp r8, const_tbl+1 ; If Magic, is Last Param \n" ^
+	      "\t" ^ "je .create_opt_list \n" ^
+        "\t" ^ "add r15, 1 ; Add each Iter, till reach Idx Last Arg in Opt List \n" ^
+	      "\t" ^ "jmp .get_opt_args \n" ^
+        "\t" ^ ".create_opt_list: \n" ^
+        "\t" ^ "add r15, -1 ; Dec each Iter \n" ^
+        "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^
+        "\t" ^ "jl .done_create_opt_list \n" ^
+        "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
+        "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
+        "\t" ^ "mov r9, rax ; Caten to next List \n " ^
+        "\t" ^ "jmp .create_opt_list \n" ^         
         "\t" ^ ".done_create_opt_list: \n" ^
         "\t" ^ "mov rax, r9 ; By default Nil \n" ^
         "\t" ^ "mov r10, rbp ; Put list in Opt loc \n" ^
-        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| \n" ^
         "\t" ^ "shl r13, 3 ; <nParams> * 8 \n" ^
         "\t" ^ "add r10, r13 ; rbp + <sizeParams> \n" ^
         "\t" ^ "add r10, 8 * 4  \n" ^
