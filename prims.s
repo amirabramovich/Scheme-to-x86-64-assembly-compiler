@@ -4,12 +4,20 @@ apply:
     mov rbp, rsp
 
     mov rcx, 2
+
 .get_list:
     mov r14, PVAR(rcx) 
-    inc rcx 
     cmp r14, const_tbl + 1
-    je .got_list
+    je .first_nil
+    inc rcx
     jmp .get_list 
+
+.first_nil:
+    inc rcx
+    mov r14, PVAR(rcx)
+    cmp r14, const_tbl+1
+    je .got_list
+    dec rcx
 
 .got_list:
     dec rcx 
@@ -52,13 +60,13 @@ apply:
 
 .finish:
 
+    dec rcx
     add rdx, rcx ; oldLen + listLen - 1
     dec rdx
     
-    cmp rcx, 1
+    cmp rcx, 0
     jle .prep_call ; no Args before List
 
-    dec rcx
 .push_args:
     mov rax, PVAR(rcx) 
     push rax 

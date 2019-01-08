@@ -2384,6 +2384,20 @@ apply:
 
 *************
 
+apply
+
+
+; .get_list:
+;     mov r14, PVAR(rcx) 
+;     ; inc rcx 
+;     cmp r14, const_tbl + 1
+;     je .got_list
+;     inc rcx ; C
+;     jmp .get_list 
+
+***************
+
+
 ******
 Helper compile-
 
