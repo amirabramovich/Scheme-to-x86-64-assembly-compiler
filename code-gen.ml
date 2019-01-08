@@ -186,7 +186,7 @@ module Code_Gen : CODE_GEN = struct
   let rec generate consts fvars e = 
       (* Helper function for Lcode of LambdaSimple *)
       let lcodeSimple vars body curr_count = 
-        prev_params := List.length vars;
+        prev_params := Pervasives.max (!prev_params) (List.length vars); (* fix T_31 *)
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaSimple body below: \n" ^
@@ -197,6 +197,7 @@ module Code_Gen : CODE_GEN = struct
 
       (* Helper function, for generate LambdaSimple *)
       let assemLambda vars body curr_count curr_env len =
+        len = !prev_params;
         "\t" ^ "lambdaSimple" ^ (string_of_int curr_count) ^ ":\n" ^ 
         "\t" ^ "MALLOC r10, 8 * (1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
         "\t" ^ "mov r11, r10 ; copy of ExtEnv address\n" ^
@@ -233,7 +234,7 @@ module Code_Gen : CODE_GEN = struct
 
       (* Helper function for Lcode of LambdaOpt *)
       let lcodeOpt vars opt body curr_count = 
-        prev_params := List.length vars + 1;
+        prev_params := Pervasives.max (!prev_params) ((List.length vars) + 1); (* fix T_31 *)
         let len = List.length vars in
         (* Explain: to Get Rev Args, Start by Count |<OptList>|, and then, caten Pairs from <EndOptList> to <StartOptList> *)
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
@@ -272,6 +273,7 @@ module Code_Gen : CODE_GEN = struct
 
       (* Helper function, for generate LambdaOpt *)
       let assemOpt vars opt body curr_count curr_env len = 
+        len = !prev_params;
         "\t" ^ "lambdaOpt" ^ (string_of_int curr_count) ^ ":\n" ^ 
         "\t" ^ "mov rsi, " ^ (string_of_int (List.length vars)) ^ " ; store num of params in rsi \n" ^ (* sotre num of params in rsi *)
         "\t" ^ "MALLOC r10, 8 * (1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
@@ -308,146 +310,146 @@ module Code_Gen : CODE_GEN = struct
         "\t\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
 
     match e with
-    | Const' (expr) -> "\t" ^ "mov rax, const_tbl+" ^ (string_of_int (get_const_addr expr consts)) ^ " ; Const \n"
-    | Var'(VarFree v) -> "\t" ^ "mov rax, qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE]" ^
-                                                                                                       " ; VarFree \n"
-    | Var'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ 
-                                " ; VarParam, mov rax, qword[rbp + 8 * (4 + minor)], pos (= minor) \n"
-    | Var'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; mov rax, qword[rbp + 8 * 2] ; VarBound \n" ^
-                                       "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")" ^ " ; major is depth in this case \n" ^
-                                       "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")" ^ " ; minor is pos in this case \n" 
-    | Def'(Var'(VarFree(name)), expr) -> (generate consts fvars expr) ^ (* generate expr (= "value") *)
-                                        "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr name fvars)) ^ "*WORD_SIZE], rax" ^  
-                                        "; define case in generate func, the \"generated expr\" is in rax" ^ "\n" ^
-                                        "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n" 
-    | Set'(Var'(VarFree(v)), expr) -> (generate consts fvars expr) ^ (* generate "Epsilon" (from Lecture) *)
-                                        "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE], rax" ^ 
-                                        " ; mov rax, qword[LabelInFVarTable(v)] \n" ^
-                                        "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
-    | Set'(Var'(VarParam(_, pos)), expr) -> (generate consts fvars expr) ^ 
-                                            "\t" ^ "mov qword PVAR(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
-                                            "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
-    | Set'(Var'(VarBound(_, depth, pos)), expr) -> (generate consts fvars expr) ^
-                                                "\t" ^ "mov rbx, qword [rbp + 16]" ^ "\n" ^
-                                                "\t" ^ "mov rbx, BVARX(" ^ (string_of_int depth)^ ")" ^ 
-                                                " ; mov rbx, qword [rbx+WORD_SIZE*depth] \n" ^
-                                                "\t" ^ "mov BVARX(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
-                                                "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
-    | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars) exprs) (* generate "Epsilons" (=exprs), separated by "newline" *)
-    | Or'(exprs) -> let current = !count in
-                    count := !count + 1;
-                    (* Helper function to generate Or' *)
-                    let or_gen consts fvars expr =
-                      (generate consts fvars expr) ^ 
-                      "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
-                      "\t" ^ "jne LexitOr" ^ (string_of_int current) ^ "\n" in
-                    String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
-                    "\t" ^ "LexitOr" ^ (string_of_int current) ^ ":\n"
-    | If'(test, dit, dif) -> let current = !count in
-                             count := !count + 1;
-                             (generate consts fvars test) ^ (* generate test *)
-                             "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
-                             "\t" ^ "je Lelse" ^ (string_of_int current) ^ "\n" ^ (* Lelse of current (number) If' *)
-                             (generate consts fvars dit) ^ (* generate dit *)
-                             "\t" ^ "jmp LexitIf" ^ (string_of_int current) ^ "\n" ^
-                             "\t" ^ "Lelse" ^ (string_of_int current) ^ ":\n" ^
-                             (generate consts fvars dif) ^ 
-                             "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
-    | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ "\n" ^ 
-                                   "\t" ^ "mov rax, qword [rax]" ^ "\n"
-    | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ "\n" ^
-                                          "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
-                                          "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
-                                          "\t" ^ "mov rax, qword [rax]" ^ "\n"
-    | BoxSet'(VarParam(_, pos), expr) -> (generate consts fvars expr) ^ (* generate "Epsilon" (=expr) *)
-                                         "\t" ^ "push rax\n" ^
-                                         "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")\n" ^ (* put Var'(v) into rax *)
-                                         "\t" ^ "pop qword [rax]\n" ^
-                                         "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
-    | BoxSet'(VarBound(_, depth, pos), expr) -> (generate consts fvars expr) ^ 
-                                                "\t" ^ "push rax\n" ^
-                                                "\t" ^ "mov rax, qword [rbp +16]\n" ^
-                                                "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
-                                                "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
-                                                "\t" ^ "pop qword [rax]\n" ^
-                                                "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
-    | Box'(VarParam (_, pos)) -> "\tmov rax, PVAR(" ^ (string_of_int pos) ^ ") ;\n"^
-                                  "\tMALLOC rbx, 8 ;\n"^
-                                  "\tmov [rbx], rax ;\n"^
-                                  "\tmov rax, rbx ;\n"
-    | LambdaSimple'(vars, body) -> 
-        let (curr_count, curr_env) = (!count, !env_count) in
-        count := !count + 1;
-        env_count := !env_count + 1;
-        let len = !prev_params in
-        let out = "\n"^(assemLambda vars body curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
-        env_count := !env_count - 1; out
-    | LambdaOpt'(vars, opt, body) -> 
-        let (curr_count, curr_env) = (!count, !env_count) in
-        count := !count + 1;
-        env_count := !env_count + 1;
-        let len = !prev_params in
-        let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
-        env_count := !env_count - 1; out
-    | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
-        let args = List.rev args in 
-        let len = List.length args in
-        let rcxLen = if (!prev_args > len)
-          then (!prev_args) (* TODO: check if use nArgs at Lambdas / Applic's, if sure that not => remove it *)
-          else len in (* for Opt args, check if works, otherwise: Opposite *)
-        prev_args := len;
-        let current = !count in
-        count := !count + 1;
-        let rec applic_rec args =
-          match args with
-          | car :: cdr -> 
-            (generate consts fvars car) ^
-            "\t" ^ "push rax\n" ^ 
-            applic_rec cdr
-          | [] -> 
-            "\t" ^ "mov rcx, " ^ (string_of_int rcxLen) ^ " ; number of arguments \n" ^
-            "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n" ^
-            (generate consts fvars op) ^
-            "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^
-            "\tpush rbx ; push env\n" ^
-            "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n" ^
-            "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n" ^
-            "\tinc rbx\n" ^
-            "\tshl rbx, 3 ; rbx = rbx * 8\n" ^
-            "\tadd rsp, rbx ; pop args\n"
-        in 
-        (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
-        "\n\t" ^ "mov rax, const_tbl + 1 ; applic \n" ^
-        "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
-        (applic_rec args)
-    | ApplicTP'(op, args) -> 
-        (* Idea: for apply, if op is <apply> => do not do (List.rev args), for push args in same order, in apply *)
-        let args = List.rev args in 
-        let len = List.length args in
-        prev_args := len;
-        let rec applicTP_rec args =
-          match args with
+      | Const' (expr) -> "\t" ^ "mov rax, const_tbl+" ^ (string_of_int (get_const_addr expr consts)) ^ " ; Const \n"
+      | Var'(VarFree v) -> "\t" ^ "mov rax, qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE]" ^
+                                                                                                        " ; VarFree \n"
+      | Var'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ 
+                                  " ; VarParam, mov rax, qword[rbp + 8 * (4 + minor)], pos (= minor) \n"
+      | Var'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; mov rax, qword[rbp + 8 * 2] ; VarBound \n" ^
+                                        "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")" ^ " ; major is depth in this case \n" ^
+                                        "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")" ^ " ; minor is pos in this case \n" 
+      | Def'(Var'(VarFree(name)), expr) -> (generate consts fvars expr) ^ (* generate expr (= "value") *)
+                                          "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr name fvars)) ^ "*WORD_SIZE], rax" ^  
+                                          "; define case in generate func, the \"generated expr\" is in rax" ^ "\n" ^
+                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n" 
+      | Set'(Var'(VarFree(v)), expr) -> (generate consts fvars expr) ^ (* generate "Epsilon" (from Lecture) *)
+                                          "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE], rax" ^ 
+                                          " ; mov rax, qword[LabelInFVarTable(v)] \n" ^
+                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+      | Set'(Var'(VarParam(_, pos)), expr) -> (generate consts fvars expr) ^ 
+                                              "\t" ^ "mov qword PVAR(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
+                                              "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+      | Set'(Var'(VarBound(_, depth, pos)), expr) -> (generate consts fvars expr) ^
+                                                  "\t" ^ "mov rbx, qword [rbp + 16]" ^ "\n" ^
+                                                  "\t" ^ "mov rbx, BVARX(" ^ (string_of_int depth)^ ")" ^ 
+                                                  " ; mov rbx, qword [rbx+WORD_SIZE*depth] \n" ^
+                                                  "\t" ^ "mov BVARX(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
+                                                  "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+      | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars) exprs) (* generate "Epsilons" (=exprs), separated by "newline" *)
+      | Or'(exprs) -> let current = !count in
+                      count := !count + 1;
+                      (* Helper function to generate Or' *)
+                      let or_gen consts fvars expr =
+                        (generate consts fvars expr) ^ 
+                        "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
+                        "\t" ^ "jne LexitOr" ^ (string_of_int current) ^ "\n" in
+                      String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
+                      "\t" ^ "LexitOr" ^ (string_of_int current) ^ ":\n"
+      | If'(test, dit, dif) -> let current = !count in
+                              count := !count + 1;
+                              (generate consts fvars test) ^ (* generate test *)
+                              "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
+                              "\t" ^ "je Lelse" ^ (string_of_int current) ^ "\n" ^ (* Lelse of current (number) If' *)
+                              (generate consts fvars dit) ^ (* generate dit *)
+                              "\t" ^ "jmp LexitIf" ^ (string_of_int current) ^ "\n" ^
+                              "\t" ^ "Lelse" ^ (string_of_int current) ^ ":\n" ^
+                              (generate consts fvars dif) ^ 
+                              "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
+      | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ "\n" ^ 
+                                    "\t" ^ "mov rax, qword [rax]" ^ "\n"
+      | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ "\n" ^
+                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
+                                            "\t" ^ "mov rax, qword [rax]" ^ "\n"
+      | BoxSet'(VarParam(_, pos), expr) -> (generate consts fvars expr) ^ (* generate "Epsilon" (=expr) *)
+                                          "\t" ^ "push rax\n" ^
+                                          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")\n" ^ (* put Var'(v) into rax *)
+                                          "\t" ^ "pop qword [rax]\n" ^
+                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
+      | BoxSet'(VarBound(_, depth, pos), expr) -> (generate consts fvars expr) ^ 
+                                                  "\t" ^ "push rax\n" ^
+                                                  "\t" ^ "mov rax, qword [rbp +16]\n" ^
+                                                  "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+                                                  "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
+                                                  "\t" ^ "pop qword [rax]\n" ^
+                                                  "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
+      | Box'(VarParam (_, pos)) -> "\tmov rax, PVAR(" ^ (string_of_int pos) ^ ") ;\n"^
+                                    "\tMALLOC rbx, 8 ;\n"^
+                                    "\tmov [rbx], rax ;\n"^
+                                    "\tmov rax, rbx ;\n"
+      | LambdaSimple'(vars, body) -> 
+          let (curr_count, curr_env) = (!count, !env_count) in
+          count := !count + 1;
+          env_count := !env_count + 1;
+          let len = !prev_params in
+          let out = "\n"^(assemLambda vars body curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
+          env_count := !env_count - 1; out
+      | LambdaOpt'(vars, opt, body) -> 
+          let (curr_count, curr_env) = (!count, !env_count) in
+          count := !count + 1;
+          env_count := !env_count + 1;
+          let len = !prev_params in
+          let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
+          env_count := !env_count - 1; out
+      | Applic'(op, args) | ApplicTP'(op, args) -> 
+          let args = List.rev args in 
+          let len = List.length args in
+          let rcxLen = if (!prev_args > len)
+            then (!prev_args) (* TODO: check if use nArgs at Lambdas / Applic's, if sure that not => remove it *)
+            else len in (* for Opt args, check if works, otherwise: Opposite *)
+          prev_args := len;
+          let current = !count in
+          count := !count + 1;
+          let rec applic_rec args =
+            match args with
             | car :: cdr -> 
-              (generate consts fvars car) ^ 
-              "\t" ^ "push rax \n" ^ 
-              applicTP_rec cdr
+              (generate consts fvars car) ^
+              "\t" ^ "push rax\n" ^ 
+              applic_rec cdr
             | [] -> 
-              "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; number of arguments \n" ^
-              "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n"^
+              "\t" ^ "mov rcx, " ^ (string_of_int rcxLen) ^ " ; number of arguments \n" ^
+              "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n" ^
               (generate consts fvars op) ^
-              "\t" ^ "mov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
-              "\t" ^ "push r9 ; push env\n" ^
-              "\t" ^ "mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; closure's code\n" ^
-              "\t" ^ "push qword [rbp + 8] ; old ret addr \n" ^
-              "\t" ^ "mov r15, qword[rbp] \n" ^
-              "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
-              "\t" ^ "mov rbp, r15 \n" ^
-              "\t" ^ "jmp r10 ; clousre's code \n"
-        in 
-        (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
-        "\t" ^ "mov rax, const_tbl + 1 ; applic tail position \n" ^
-        "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
-        (applicTP_rec args)
-    | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
+              "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^
+              "\tpush rbx ; push env\n" ^
+              "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n" ^
+              "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n" ^
+              "\tinc rbx\n" ^
+              "\tshl rbx, 3 ; rbx = rbx * 8\n" ^
+              "\tadd rsp, rbx ; pop args\n"
+          in 
+          (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
+          "\n\t" ^ "mov rax, const_tbl + 1 ; applic \n" ^
+          "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
+          (applic_rec args)
+      | ApplicTP'(op, args) -> 
+          (* Idea: for apply, if op is <apply> => do not do (List.rev args), for push args in same order, in apply *)
+          let args = List.rev args in 
+          let len = List.length args in
+          prev_args := len;
+          let rec applicTP_rec args =
+            match args with
+              | car :: cdr -> 
+                (generate consts fvars car) ^ 
+                "\t" ^ "push rax \n" ^ 
+                applicTP_rec cdr
+              | [] -> 
+                "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; number of arguments \n" ^
+                "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n"^
+                (generate consts fvars op) ^
+                "\t" ^ "mov r9, [rax+TYPE_SIZE] ; closure's env\n" ^
+                "\t" ^ "push r9 ; push env\n" ^
+                "\t" ^ "mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; closure's code\n" ^
+                "\t" ^ "push qword [rbp + 8] ; old ret addr \n" ^
+                "\t" ^ "mov r15, qword[rbp] \n" ^
+                "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
+                "\t" ^ "mov rbp, r15 \n" ^
+                "\t" ^ "jmp r10 ; clousre's code \n"
+          in 
+          (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
+          "\t" ^ "mov rax, const_tbl + 1 ; applic tail position \n" ^
+          "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
+          (applicTP_rec args)
+      | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
 end;;

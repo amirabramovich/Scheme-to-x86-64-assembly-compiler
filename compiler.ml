@@ -83,8 +83,8 @@ car:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(0) ;; rsi got pair
-	CAR rax, rsi ;; rax got car
+    mov rsi, PVAR(0) ; rsi got pair
+	CAR rax, rsi ; rax got car
     jmp .return
 
 .return:
@@ -107,11 +107,11 @@ set_car:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(1) ;; rsi contains new car
-    mov r8, PVAR(0) ;; qword of pair
-    add r8, 1 ;; r8 is car loc
+    mov rsi, PVAR(1) ; rsi contains new car
+    mov r8, PVAR(0) ; qword of pair
+    add r8, 1 ; r8 is car loc
     mov [r8], rsi
-    mov r9, qword [r8] ;; r9 is car val
+    mov r9, qword [r8] ; r9 is car val
 
     mov rax, SOB_VOID_ADDRESS
     jmp .return
@@ -124,11 +124,11 @@ set_cdr:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(1) ;; rsi contains new car
-    mov r8, PVAR(0) ;; qword of pair
-    add r8, 9 ;; r8 is cdr loc
+    mov rsi, PVAR(1) ; rsi contains new car
+    mov r8, PVAR(0) ; qword of pair
+    add r8, 9 ; r8 is cdr loc
     mov [r8], rsi
-    mov r9, qword [r8] ;; r9 is car val
+    mov r9, qword [r8] ; r9 is car val
 
     mov rax, SOB_VOID_ADDRESS
     jmp .return
@@ -141,9 +141,9 @@ cons:
     push rbp
     mov rbp, rsp
 
-    mov r8, PVAR(0) ;; car
-    mov r9, PVAR(1) ;; cdr
-    MAKE_PAIR (rax, r8, r9) ;; put pair into rax, r8 is car, r9 is cdr
+    mov r8, PVAR(0) ; car
+    mov r9, PVAR(1) ; cdr
+    MAKE_PAIR (rax, r8, r9) ; pair into rax
 
     jmp .return
 
