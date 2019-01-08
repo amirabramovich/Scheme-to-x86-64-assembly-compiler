@@ -41,6 +41,7 @@ apply:
     cmp rdx, 1
     jne .non_empty
     push r11 ; if empty
+    inc rdx 
 
 .non_empty:
     mov r10, rsp

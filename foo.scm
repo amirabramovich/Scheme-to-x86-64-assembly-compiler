@@ -388,7 +388,7 @@
 ;;     (+ 1 1)
 ;;     (+ 3 0)) 1)
 
-(apply (lambda x x) 1 '())
+(apply (lambda x x) '(3 4))
 ;; '()
 
 ;; (apply (lambda x x) '())
