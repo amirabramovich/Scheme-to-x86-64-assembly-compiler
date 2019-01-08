@@ -389,7 +389,7 @@ module Code_Gen : CODE_GEN = struct
         let len = !prev_params in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
-    | Applic'(op, args) | ApplicTP'(op, args) -> 
+    | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
         let args = List.rev args in 
         let len = List.length args in
         let rcxLen = if (!prev_args > len)

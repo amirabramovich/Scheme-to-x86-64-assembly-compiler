@@ -111,7 +111,7 @@ dq %1
 
 %define PARAM_COUNT qword [rbp+3*WORD_SIZE]
 
-; prev version of shift frame
+
 %macro SHIFT_FRAME 1 ; %1 = size of frame (constant) ; 
 	push rax
 	mov r9, PARAM_COUNT
@@ -130,22 +130,6 @@ dq %1
 	shl r8, 3
 	add rsp, r8
 %endmacro
-
-; shift frame from ps # 12
-; %1- size of frame (constant) = 5+m (m = length of arglist in ApplicTP')
-; %macro SHIFT_FRAME 1
-; 	push rax
-; 	mov rax, PARAM_COUNT	
-; 	add rax, 5 ; TODO: magic
-; %assign i 1
-; %rep %1
-; 	dec rax
-; 	mov r8, qword[rbp-8*i]
-; 	mov [rbp+8*rax], r8
-; %assign i i+1
-; %endrep
-; 	pop rax
-; %endmacro
 
 
 ; Creates a short SOB with the

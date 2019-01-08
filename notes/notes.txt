@@ -1567,12 +1567,824 @@ lamdda  simple
     .done_create_opt_list:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+******
+prev  apply
 
+
+; apply:
+;     push rbp
+;     mov rbp, rsp
+
+;     mov r9, PVAR(0) ;; proc
+;     mov r8, PVAR(1) ;; pair
+
+;     mov r12, 0 ;; counter <nargs>, count from first arg
+;     mov r13, const_tbl + 1  ;; for cmp in loop
+
+;     .push_elems:
+
+; 	CAR r10, r8 ;; r10 got car
+;     CDR r11, r8 ;; r11 got cdr
+
+;     push r10 ;; push car
+;     mov r8, r11 ;; old cdr is new list
+;     add r12, 1 ;; inc <nargs> counter
+
+;     cmp r11, r13
+;     jne .push_elems
+
+;     ;; reverse elems
+;     ;; this implemetation is work now without loop (basic case for 2 elems)
+;     ;; for more elems, we need to support first at more elems in apply
+;     ;; n = n - 2, at each iteration (at first, n = <nArgs> = r12)
+;     pop rax ;; first elem
+    
+;     ;; get to next elem to pop (to swap)
+;     mov r8, r12 ;; n
+;     sub r8, 2 ;; n-2
+;     shl r8, 3 ;; (n-2)*8
+;     add rsp, r8 ;; add rsp, (n-2)*8 ;; this is the "offset" between 2 elems of curr swap.
+    
+;     pop rbx ;; sec elem
+;     push rax ;; first step of swap 
+
+;     sub rsp, r8 ;; go to first elem loc
+;     push rbx ;; second step of swap
+
+
+;     push r12 ;; num args
+
+;     mov rax, r9 ;; proc ptr
+;     mov rbx, [rax+TYPE_SIZE] ;; env
+; 	push rbx ;; push env
+; 	mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ;; code
+; 	call rbx ;; call code (code of closure)
+
+;     add rsp, 8 ;; add num args
+;     pop rbx ;; pop args count
+;     shl r12, 3 ;; 8 * <nargs>
+;     add rsp, r12 ;; add the size of args
+  
+
+; .return:
+;     leave
+;     ret
+
+; apply:
+;     push rbp
+;     mov rbp, rsp
+
+;     mov r8, PVAR(0) ; proc (+, - , etc) ; rbp+32
+;     mov r9, PVAR(-1) ; or qword [rbp+(3)*8] ; nArgs
+
+;     mov r11, rbp
+;     add r11, 32 ; proc (+, -, etc) loc 
+
+;     mov rcx, 1 ; idx iter args
+
+;     .get_list:
+;         ;; shift bottom stack by one (params + list)
+;         mov r12, r11 ; r12 is curr idx loc
+;         add r12, 8 ; offset 1
+;         mov r11, r12 ; shift up by one
+;         add r11, 8 ; next arg
+
+;         mov r10, PVAR(rcx) ; arg[idx]
+;         cmp r10, const_tbl+1 ; if arg[idx] = Magic
+;         je .end_get_list
+
+;         add rcx, 1 ; idx++
+;         jmp .get_list
+
+;     .end_get_list: ; now PVAR(idx) = Magic
+
+;     dec rcx ; now PVAR(rcx) = list
+;     mov r10, PVAR(rcx) ; list
+;     ;; now push cars, and count
+
+;     mov rcx, 0 ; counter, lenList
+
+;     .flat_args:
+;         CAR r11, r10 ; 1st arg
+        
+;         cmp r11, const_tbl+1 ; end of list
+;         je .end_flat_args
+
+;         CDR r12, r10 ; rest list
+;         push r11 ; push 1st arg
+;         mov r10, r12 ; list get rest list
+;         add rcx, 1; lenList
+
+;     .end_flat_args:
+
+;     push const_tbl+1 ; push magic again, at "new top"
+;     ;; now go to argList loc, and inc by lenList - 1
+;     add rcx, r9 ; len+old
+;     add rcx, -1 ; len+old-1
+
+;     mov rdx, rbp
+;     add rdx, 3*8 ; loc
+;     mov qword[rdx], rcx ; len+old-1
+
+;     ;; remove plus and MAKE_CLOSURE
+;     ; MAKE_CLOSURE(rax, rbp+8*4, ) ; + 
+;     ;; Stack ready
 
 ******
 
+part of apply
+
+
+    ; mov r12, qword[rsp] ; Duplic # why ?
+    ; mov r11, qword[rbp - 16] ; Duplic # why ?
+    ; cmp r11, r12 ; Duplic # why ?
+    ; jg .done_inverse_stack
+
+; .inverse_stack:
+;     mov r10, r12 ; oldLen ?
+;     mov r12, r11 ; old rbp ?
+;     mov r11, r10 ; oldLen ?
+;     mov r12, qword[rsp] ; Duplic # oldLen ?
+;     mov r11, qword[rbp-16] ; Duplic # old rbp ?
+;     cmp r11, r12 ; Duplic # why ?
+;     jg .done_inverse_stack
+;     jmp .inverse_stack
+
+
+.done_inverse_stack:
+
+
+*******
+
+part of apply 
+
+
+
+    push rdx ; push <lenList> # Mistake ? Add 4 + oldLen ?
+
+    push r10 ; push env
+    push qword [rbp + 8] ; old ret addr
+    mov r15, qword[rbp] ; backup rbp # rbp ? wy ?
+    add rdx, 5 ; why ?
+    mov r14, 1 ; Shift_Frame macro # use it ?
+	push rax ; why ?
+	mov r9, PARAM_COUNT
+	mov rax, r9 ; 
+	add rax, 5 ; oldLen + 5 ? why ?
+
+
+	pop rax
+	mov r8, r9 ; oldLen ?
+	add r8, 5 ; oldLen + 5 ?
+	shl r8, 3 ; (oldLen + 5) * 8 ? Add (ListLen  -1) to oldLen ?
+	add rsp, r8 ; end macro
+    mov rbp, r15 ; return rbp from backup ; r15 = qword[oldRbp] ?
+    jmp r11 ; clousre's code
+
+
+*******
+
+prev  applyy
+
+; Amir # v
+apply:
+    push rbp
+    mov rbp, rsp
+
+    mov rcx, 2 ; start from 2
+    .get_list: ; goToList
+        mov r14, PVAR(rcx) ; PVAR(idx)
+        cmp r14, const_tbl+1 ; Magic ?
+        je .got_list ; finish if yes
+        inc rcx ; idx ++ 
+        jmp .get_list ; back to loop
+
+    .got_list: ; rcx points magic
+    dec rcx ; idx--
+    mov r14, PVAR(rcx) ; List
+
+    mov rbx, const_tbl + 1 ; Nil as Magic
+    push rbx ; push Magic
+    mov rdx, 0 ; counter <lenList>
+
+.push_elems:
+	CAR r10, r14 ; r10 got car (of curr list)
+    CDR r11, r14 ; r11 got cdr (of curr list)
+
+    push r10 ; push car (of curr list)
+    mov r14, r11 ; next list is curr cdr
+    inc rdx ; <lenList> ++
+
+    cmp r11, const_tbl+1 ; Cdr is Nil ?
+    jne .push_elems ; if yes, finish Iterate
+
+    ; locate notListArgs
+
+    mov r15, PVAR(0) ; proc
+
+    CAR r10, r15 ; r10 got env, car of proc is env ?
+    CDR r11, r15 ; r11 got code, cdr of proc is code ?
+
+    push rdx ; push <lenList> # Mistake ? Add 4 + oldLen ?
+    
+    push r10 ; push env
+    push qword [rbp + 8] ; old ret addr
+    mov r15, qword[rbp] ; backup rbp # rbp ? wy ?
+    add rdx, 5 ; why ?
+    mov r14, 1 ; Shift_Frame macro # use it ?
+	push rax ; why ?
+	mov r9, PARAM_COUNT
+	mov rax, r9 ; 
+	add rax, 5 ; oldLen + 5 ? why ?
+
+
+.shift_stack:
+    cmp r14, rdx ; loop <lenList> times ?
+    je .done_shift_stack
+	dec rax
+    mov r13, r14 ; i
+    shl r13, 3 ; 8 * i
+    mov r12, rbp
+    sub r12, r13 ; rbp - 8*i
+    mov r8, [r12] ; fix
+	mov [rbp + WORD_SIZE * rax], r8
+    inc r14
+    jmp .shift_stack
+
+.done_shift_stack:
+	pop rax
+	mov r8, r9 ; oldLen ?
+	add r8, 5 ; oldLen + 5 ?
+	shl r8, 3 ; (oldLen + 5) * 8 ? Add (ListLen  -1) to oldLen ?
+	add rsp, r8 ; end macro
+    mov rbp, r15 ; return rbp from backup ; r15 = qword[oldRbp] ?
+    jmp r11 ; clousre's code
+  
+.return:
+    leave
+    ret
+
+******
+prev shift frame
+
+; shift frame from ps # 12
+; %1- size of frame (constant) = 5+m (m = length of arglist in ApplicTP')
+; %macro SHIFT_FRAME 1
+; 	push rax
+; 	mov rax, PARAM_COUNT	
+; 	add rax, 5 ; TODO: magic
+; %assign i 1
+; %rep %1
+; 	dec rax
+; 	mov r8, qword[rbp-8*i]
+; 	mov [rbp+8*rax], r8
+; %assign i i+1
+; %endrep
+; 	pop rax
+; %endmacro
+
 ******
 
+; prev version of shift frame
+
+%macro SHIFT_FRAME 1 ; %1 = size of frame (constant) ; 
+	push rax
+	push r10 ; use
+	mov r9, PARAM_COUNT
+	mov rax, r9
+	add rax, 5
+%assign i 1
+%rep %1
+	dec rax
+	mov r10, rbp
+	sub r10, 8 * i ; rbp - 8 * i
+	; mov r8, [rbp - WORD_SIZE * i]
+	mov r8, [r10]
+	mov [rbp+WORD_SIZE*rax], r8
+%assign i i+1
+%endrep
+	pop r10 ; use
+	pop rax
+	mov r8, r9
+	add r8, 5
+	shl r8, 3
+	add rsp, r8
+%endmacro
+
+
+
+******
+prev apply
+
+
+apply:
+    push rbp
+    mov rbp, rsp
+
+    mov rcx, 2
+.get_list:
+    mov r14, PVAR(rcx) 
+    cmp r14, const_tbl + 1
+    je .got_list
+    inc rcx
+    jmp .get_list 
+
+.got_list:
+    dec rcx
+    mov r14, PVAR(rcx) ; List
+
+    push const_tbl+1
+    mov rdx, 0 ; <lenList>
+
+.push_elems:
+	CAR r10, r14
+    CDR r11, r14
+    push r10
+    mov r14, r11
+    inc rdx
+    cmp r11, const_tbl+1
+    jne .push_elems
+
+    dec rcx ; lenArgsNotList
+    add rdx, rcx ; oldLen + listLen - 1
+.push_args:
+    mov rax, PVAR(rcx)
+    push rax 
+    cmp rcx, 1
+    je .prep_call
+    dec rcx
+    jmp .push_args
+
+.prep_call:
+    push rdx ; <newNumArgs>
+    mov rax, PVAR(0)
+    mov r9, [rax + TYPE_SIZE] ; env 
+    push r9 ; push
+    mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
+    push qword [rbp + 8] ; old ret addr
+    mov r15, qword[rbp]    
+    add rdx, 5 ; <newLen> + 5
+    
+    ; Macro Shift_Frame
+	push rax
+	mov r9, PARAM_COUNT ; prevLen + 5
+	mov rax, r9
+	add rax, 5
+    mov r11, 1
+
+.shift: ; # <rdx> times
+	dec rax
+    
+    mov r12, r11 ; idxLoop
+    shl r12, 3 
+    mov r13, rbp
+    sub r13, r12 ; rbp - 8 * idxLoop
+
+    mov r8, qword[r13]
+	mov [rbp + WORD_SIZE * rax], r8
+    cmp r11, rdx
+    je .end_shift
+    inc r11
+    jmp .shift
+
+.end_shift:
+	pop rax
+	mov r8, r9
+	add r8, 5
+	shl r8, 3
+	add rsp, r8 ; End Macro
+
+    mov rbp, r15
+    jmp r10 ; code
+  
+.return:
+    leave
+    ret
+
+]
+******
+
+apply:
+    push rbp
+    mov rbp, rsp
+
+    mov rcx, 2
+.get_list:
+    mov r14, PVAR(rcx) 
+    cmp r14, const_tbl + 1
+    je .got_list
+    inc rcx
+    jmp .get_list 
+
+.got_list:
+    dec rcx ; D :: 
+    mov r14, PVAR(rcx) ; List
+    mov r11, r14 ; Init
+    mov r10, r11 ; Init
+    mov rdx, 1 ; Init <lenList>
+.push_list:
+    push r10
+    cmp r11, const_tbl+1 ; D :: 
+    je .end_push_list
+	CAR r10, r14
+    CDR r11, r14
+    mov r14, r11
+    inc rdx
+    jmp .push_list
+
+.end_push_list:
+
+    add rdx, rcx ; oldLen + listLen - 1 ; D :: 
+    dec rdx
+
+.push_args:
+    mov rax, PVAR(rcx) ; First Iter pushes Magic
+    push rax 
+    cmp rcx, 1
+    je .prep_call
+    dec rcx
+    jmp .push_args
+
+.prep_call:
+    push rdx ; <newNumArgs>
+    mov rax, PVAR(0)
+    mov r9, [rax + TYPE_SIZE] ; env 
+    push r9 ; push
+    mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
+    push qword [rbp + 8] ; old ret addr
+    mov r15, qword[rbp]    
+    add rdx, 5 ; <newLen> + 5
+    
+    ; Macro Shift_Frame
+	push rax
+	mov r9, PARAM_COUNT ; prevLen + 5
+	mov rax, r9
+	add rax, 5
+    mov r11, 1
+    
+.shift: ; # <rdx> times
+	dec rax
+    
+    mov r12, r11 ; idxLoop
+    shl r12, 3 
+    mov r13, rbp
+    sub r13, r12 ; rbp - 8 * idxLoop
+
+    mov r8, qword[r13]
+	mov [rbp + WORD_SIZE * rax], r8
+    cmp r11, rdx
+    je .end_shift
+    inc r11
+    jmp .shift
+
+.end_shift:
+	pop rax
+	mov r8, r9
+	add r8, 5
+	shl r8, 3
+	add rsp, r8 ; End Macro
+
+    mov rbp, r15
+    jmp r10 ; code
+  
+.return:
+    leave
+    ret
+
+    ********
+
+
+
+; apply:
+;     push rbp
+;     mov rbp, rsp
+
+;     mov rcx, 2
+; .get_list:
+;     mov r14, PVAR(rcx) 
+;     cmp r14, const_tbl + 1
+;     je .got_list
+;     inc rcx
+;     jmp .get_list 
+
+; .got_list:
+;     dec rcx ; D :: 
+;     mov r14, PVAR(rcx) ; List
+;     mov r11, r14 ; Init
+;     mov rdx, 1 ; Init <lenList>
+
+;     push const_tbl+1 ; Magic
+
+; .push_list:
+;     cmp r11, const_tbl+1 ; D :: 
+;     je .end_push_list
+; 	CAR r10, r14
+;     CDR r11, r14
+;     push r10
+;     mov r14, r11
+;     inc rdx
+;     jmp .push_list
+
+; .end_push_list:
+;     cmp rdx, 1
+;     jne .non_empty
+;     push r11
+
+; .non_empty:
+
+;     add rdx, rcx ; oldLen + listLen - 1 ; D :: 
+;     dec rdx
+
+; cmp rcx, 1 ; C (2)
+; jle .prep_call ; no Args before List
+
+; .push_args:
+;     mov rax, PVAR(rcx) 
+;     push rax 
+;     cmp rcx, 2
+;     je .prep_call
+;     dec rcx
+;     jmp .push_args
+
+; .prep_call:
+;     push rdx ; <newNumArgs>
+;     mov rax, PVAR(0)
+;     mov r9, [rax + TYPE_SIZE] ; env 
+;     push r9 ; push
+;     mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
+;     push qword [rbp + 8] ; old ret addr
+;     mov r15, qword[rbp]    
+;     add rdx, 5 ; <newLen> + 5
+    
+;     ; Macro Shift_Frame
+; 	push rax
+; 	mov r9, PARAM_COUNT ; prevLen + 5
+; 	mov rax, r9
+; 	add rax, 5
+;     mov r11, 1
+    
+; .shift: ; # <rdx> times
+; 	dec rax
+;     mov r12, r11 ; idxLoop
+;     shl r12, 3 
+;     mov r13, rbp
+;     sub r13, r12 ; rbp - 8 * idxLoop
+;     mov r8, qword[r13]
+; 	mov [rbp + WORD_SIZE * rax], r8
+;     cmp r11, rdx
+;     je .end_shift
+;     inc r11
+;     jmp .shift
+
+; .end_shift:
+; 	pop rax
+; 	mov r8, r9
+; 	add r8, 5
+; 	shl r8, 3
+; 	add rsp, r8 ; End Macro
+
+;     mov rbp, r15
+;     jmp r10 ; code
+  
+; .return:
+;     leave
+;     ret
+
+
+*************
+
+apply:
+    push rbp
+    mov rbp, rsp
+
+    mov rcx, 2
+.get_list:
+    mov r14, PVAR(rcx) 
+    cmp r14, const_tbl + 1
+    je .got_list
+    inc rcx
+    jmp .get_list 
+
+.got_list:
+    dec rcx 
+    mov r14, PVAR(rcx) ; List
+    mov r11, r14 ; Init
+    mov rdx, 1 ; Init <lenList>
+
+    push const_tbl+1 ; Magic
+
+.push_list:
+    cmp r11, const_tbl+1 
+    je .end_push_list
+	CAR r10, r14
+    CDR r11, r14
+    push r10
+    mov r14, r11
+    inc rdx
+    jmp .push_list
+
+.end_push_list:
+    cmp rdx, 1
+    jne .non_empty
+    push r11 ; if empty
+
+.non_empty:
+    mov r10, rsp
+    mov r11, rbp
+    add r11, -16 ; prep swap
+
+.reverse:
+    cmp r10, r11
+    jg .finish
+    mov r12, qword[r10] ; swap
+    mov r13, qword[r11]
+    mov qword[r10], r13
+    mov qword[r11], r12
+    add r10, 8 ; inc 
+    add r11, -8 ; dec
+    jmp .reverse
+
+.finish:
+
+    add rdx, rcx ; oldLen + listLen - 1
+    dec rdx
+    
+    cmp rcx, 1
+    jle .prep_call ; no Args before List
+
+.push_args:
+    mov rax, PVAR(rcx) 
+    push rax 
+    cmp rcx, 2
+    je .prep_call
+    dec rcx
+    jmp .push_args
+
+.prep_call:
+    push rdx ; <newNumArgs>
+    mov rax, PVAR(0)
+    mov r9, [rax + TYPE_SIZE] ; env 
+    push r9 ; push
+    mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
+    push qword [rbp + 8] ; old ret addr
+    mov r15, qword[rbp]    
+    add rdx, 5 ; <newLen> + 5
+    
+    ; Macro Shift_Frame
+	push rax
+	mov r9, PARAM_COUNT ; prevLen + 5
+	mov rax, r9
+	add rax, 5
+    mov r11, 1
+    
+.shift: ; # <rdx> times
+	dec rax
+    mov r12, r11 ; idxLoop
+    shl r12, 3 
+    mov r13, rbp
+    sub r13, r12 ; rbp - 8 * idxLoop
+    mov r8, qword[r13]
+	mov [rbp + WORD_SIZE * rax], r8
+    cmp r11, rdx
+    je .end_shift
+    inc r11
+    jmp .shift
+
+.end_shift:
+	pop rax
+	mov r8, r9
+	add r8, 5
+	shl r8, 3
+	add rsp, r8 ; End Macro
+
+    mov rbp, r15
+    jmp r10 ; code
+  
+.return:
+    leave
+    ret
+
+
+
+*********
+
+
+; apply:
+;     push rbp
+;     mov rbp, rsp
+
+;     mov rcx, 2
+; .get_list:
+;     mov r14, PVAR(rcx) 
+;     cmp r14, const_tbl + 1
+;     je .got_list
+;     inc rcx
+;     jmp .get_list 
+
+; .got_list:
+;     dec rcx 
+;     mov r14, PVAR(rcx) ; List
+;     mov r11, r14 ; Init
+;     mov rdx, 1 ; Init <lenList>
+
+;     push const_tbl+1 ; Magic
+
+; .push_list:
+;     cmp r11, const_tbl+1 
+;     je .end_push_list
+; 	CAR r10, r14
+;     CDR r11, r14
+;     push r10
+;     mov r14, r11
+;     inc rdx
+;     jmp .push_list
+
+; .end_push_list:
+;     cmp rdx, 1
+;     jne .non_empty
+;     push r11 ; if empty
+
+; .non_empty:
+;     mov r10, rsp
+;     mov r11, rbp
+;     add r11, -16 ; prep swap
+
+; .reverse:
+;     cmp r10, r11
+;     jg .finish
+;     mov r12, qword[r10] ; swap
+;     mov r13, qword[r11]
+;     mov qword[r10], r13
+;     mov qword[r11], r12
+;     add r10, 8 ; inc 
+;     add r11, -8 ; dec
+;     jmp .reverse
+
+; .finish:
+
+;     add rdx, rcx ; oldLen + listLen - 1
+;     dec rdx
+    
+;     cmp rcx, 1
+;     jle .prep_call ; no Args before List
+
+;     dec rcx ; A
+; .push_args:
+;     mov rax, PVAR(rcx) 
+;     push rax 
+;     cmp rcx, 1 ; C (2)
+;     je .prep_call
+;     dec rcx
+;     jmp .push_args
+
+; .prep_call:
+;     push rdx ; <newNumArgs>
+;     mov rax, PVAR(0)
+;     mov r9, [rax + TYPE_SIZE] ; env 
+;     push r9 ; push
+;     mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
+;     push qword [rbp + 8] ; old ret addr
+;     mov r15, qword[rbp]    
+;     add rdx, 5 ; <newLen> + 5
+    
+;     ; Macro Shift_Frame
+; 	push rax
+; 	mov r9, PARAM_COUNT ; prevLen + 5
+; 	mov rax, r9
+; 	add rax, 5
+;     mov r11, 1
+    
+; .shift: ; # <rdx> times
+; 	dec rax
+;     mov r12, r11 ; idxLoop
+;     shl r12, 3 
+;     mov r13, rbp
+;     sub r13, r12 ; rbp - 8 * idxLoop
+;     mov r8, qword[r13]
+; 	mov [rbp + WORD_SIZE * rax], r8
+;     cmp r11, rdx
+;     je .end_shift
+;     inc r11
+;     jmp .shift
+
+; .end_shift:
+; 	pop rax
+; 	mov r8, r9
+; 	add r8, 5
+; 	shl r8, 3
+; 	add rsp, r8 ; End Macro
+
+;     mov rbp, r15
+;     jmp r10 ; code
+  
+; .return:
+;     leave
+;     ret
+
+
+*************
+
+******
 Helper compile-
 
 ocaml compiler.ml compilerTest.scm > compilerTest.s

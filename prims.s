@@ -1,62 +1,115 @@
+
 apply:
     push rbp
     mov rbp, rsp
 
-    mov r9, PVAR(0) ;; proc
-    mov r8, PVAR(1) ;; pair
+    mov rcx, 2
+.get_list:
+    mov r14, PVAR(rcx) 
+    inc rcx 
+    cmp r14, const_tbl + 1
+    je .got_list
+    jmp .get_list 
 
-    mov r12, 0 ;; counter <nargs>, count from first arg
-    mov r13, const_tbl + 1  ;; for cmp in loop
+.got_list:
+    dec rcx 
+    mov r14, PVAR(rcx) ; List
+    mov r11, r14 ; Init
+    mov rdx, 1 ; Init <lenList>
 
-    .push_elems:
+    push const_tbl+1 ; Magic
 
-	CAR r10, r8 ;; r10 got car
-    CDR r11, r8 ;; r11 got cdr
+.push_list:
+    cmp r11, const_tbl+1 
+    je .end_push_list
+	CAR r10, r14
+    CDR r11, r14
+    push r10
+    mov r14, r11
+    inc rdx
+    jmp .push_list
 
-    push r10 ;; push car
-    mov r8, r11 ;; old cdr is new list
-    add r12, 1 ;; inc <nargs> counter
+.end_push_list:
+    cmp rdx, 1
+    jne .non_empty
+    push r11 ; if empty
 
-    cmp r11, r13
-    jne .push_elems
+.non_empty:
+    mov r10, rsp
+    mov r11, rbp
+    add r11, -16 ; prep swap
 
-    ;; reverse elems
-    ;; this implemetation is work now without loop (basic case for 2 elems)
-    ;; for more elems, we need to support first at more elems in apply
-    ;; n = n - 2, at each iteration (at first, n = <nArgs> = r12)
-    pop rax ;; first elem
+.reverse:
+    cmp r10, r11
+    jg .finish
+    mov r12, qword[r10] ; swap
+    mov r13, qword[r11]
+    mov qword[r10], r13
+    mov qword[r11], r12
+    add r10, 8 ; inc 
+    add r11, -8 ; dec
+    jmp .reverse
+
+.finish:
+
+    add rdx, rcx ; oldLen + listLen - 1
+    dec rdx
     
-    ;; get to next elem to pop (to swap)
-    mov r8, r12 ;; n
-    sub r8, 2 ;; n-2
-    shl r8, 3 ;; (n-2)*8
-    add rsp, r8 ;; add rsp, (n-2)*8 ;; this is the "offset" between 2 elems of curr swap.
+    cmp rcx, 1
+    jle .prep_call ; no Args before List
+
+    dec rcx
+.push_args:
+    mov rax, PVAR(rcx) 
+    push rax 
+    cmp rcx, 1
+    je .prep_call
+    dec rcx
+    jmp .push_args
+
+.prep_call:
+    push rdx ; <newNumArgs>
+    mov rax, PVAR(0)
+    mov r9, [rax + TYPE_SIZE] ; env 
+    push r9 ; push
+    mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
+    push qword [rbp + 8] ; old ret addr
+    mov r15, qword[rbp]    
+    add rdx, 5 ; <newLen> + 5
     
-    pop rbx ;; sec elem
-    push rax ;; first step of swap 
+    ; Macro Shift_Frame
+	push rax
+	mov r9, PARAM_COUNT ; prevLen + 5
+	mov rax, r9
+	add rax, 5
+    mov r11, 1
+    
+.shift: ; # <rdx> times
+	dec rax
+    mov r12, r11 ; idxLoop
+    shl r12, 3 
+    mov r13, rbp
+    sub r13, r12 ; rbp - 8 * idxLoop
+    mov r8, qword[r13]
+	mov [rbp + WORD_SIZE * rax], r8
+    cmp r11, rdx
+    je .end_shift
+    inc r11
+    jmp .shift
 
-    sub rsp, r8 ;; go to first elem loc
-    push rbx ;; second step of swap
+.end_shift:
+	pop rax
+	mov r8, r9
+	add r8, 5
+	shl r8, 3
+	add rsp, r8 ; End Macro
 
-
-    push r12 ;; num args
-
-    mov rax, r9 ;; proc ptr
-    mov rbx, [rax+TYPE_SIZE] ;; env
-	push rbx ;; push env
-	mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ;; code
-	call rbx ;; call code (code of closure)
-
-    add rsp, 8 ;; add num args
-    pop rbx ;; pop args count
-    shl r12, 3 ;; 8 * <nargs>
-    add rsp, r12 ;; add the size of args
+    mov rbp, r15
+    jmp r10 ; code
   
-
 .return:
     leave
     ret
-
 
 
 is_boolean:
