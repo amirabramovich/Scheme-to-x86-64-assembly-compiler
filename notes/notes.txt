@@ -1449,6 +1449,75 @@ lambdaOpt
 	; Original Closure Body
 
 *****
+lamdda  simple
+
+
+
+	Lcode1:
+	push rbp
+	mov rbp , rsp ; parse of lambdaOpt body below: 
+	;; Closure Body 
+
+    mov r15, rcx ; <nArgs> 
+	add r15, -1 ; <nArgs> - 1 
+
+    ; mov r12, rcx ; Counter for loop :: 2 ;; Comment Out
+	; sub r12, r13 ; <nArgs> - <nParams> = |Opt list| = 2 :: 2 ;; Comment Out
+    ; mov r14, 0 ; Comparator for loop condition ;; ;; Comment Out
+
+
+	mov r9, const_tbl + 1 ; Nil, for first pair 
+
+
+
+	;; TODO: check if this case is necessary 
+	; cmp r13, 0 ; <nParams> = 0, Variadic case ;; Comment Out
+    ; jne .non_variadic ;; Comment Out
+	; sub r12, 1 ;; Comment Out
+	; sub r14, 1 ;; Comment Out
+	; .non_variadic: ;; Comment Out
+
+	; cmp r13, 2 ; if |Params| < 2 ;; Comment Out
+	; jl .create_opt_list ; jump ;; Comment Out
+	; add r12, 1 ; Counter for loop ;; Comment Out
+	; add r14, 1 ; Comparator for loop condition ;; Comment Out
+
+	.create_opt_list: 
+	
+    cmp r12, r14 ;; Comment Out
+	je .done_create_opt_list ;; Comment Out
+
+	mov r8, PVAR(r15) ; Index Of Curr Param
+    
+
+    cmp r8, const_tbl+1 ;; C
+    je .done_create_opt_list ;; C
+
+	add r15, -1 ; dec each iter
+
+	; dec r12 ; Loop counter ;; Comment Out
+
+	MAKE_PAIR(rax, r8, r9) ; Make List 
+	mov r9, rax ; Caten to next List 
+	jmp .create_opt_list 
+	
+    .done_create_opt_list: 
+	mov rax, r9 ; By default Nil 
+ 	mov r10, rbp ; Put list in Opt loc 
+    
+    mov r13, 0 ; |Params| ;; MOOVED
+
+	shl r13, 3 ; <nParams> * 8 
+	add r10, r13 ; rbp + <sizeParams> 
+	add r10, 8 * 4  
+	mov [r10], rax ; Put list 
+	;; Original Closure Body 
+	mov rax, PVAR(0) ; VarParam, mov rax, qword[rbp + 8 * (4 + minor)], pos (= minor) 
+	leave ; done parsing lambdaOpt body above 
+	ret
+
+
+*****
 
 
 

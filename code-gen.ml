@@ -20,6 +20,7 @@ module Code_Gen : CODE_GEN = struct
 
   let count = (ref 0);;
   let env_count = (ref 0);;
+  let prev_params = (ref 0);;
   let prev_args = (ref 0);;
 
 
@@ -185,7 +186,7 @@ module Code_Gen : CODE_GEN = struct
   let rec generate consts fvars e = 
       (* Helper function for Lcode of LambdaSimple *)
       let lcodeSimple vars body curr_count = 
-        prev_args := List.length vars;
+        prev_params := List.length vars;
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaSimple body below: \n" ^
@@ -232,43 +233,29 @@ module Code_Gen : CODE_GEN = struct
 
       (* Helper function for Lcode of LambdaOpt *)
       let lcodeOpt vars opt body curr_count = 
-        prev_args := List.length vars + 1;
+        prev_params := List.length vars + 1;
         let len = List.length vars in
         "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n" ^
-        (* Adjust stack for opt *)
-        (* TODO: order in this code *)
         "\t" ^ ";; Closure Body \n" ^ 
-        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| \n" ^
-        "\t" ^ "mov r15, rcx ; <nArgs> \n" ^
-        "\t" ^ "add r15, -1 ; <nArgs> - 1 \n" ^
-	      "\t" ^ "mov r12, rcx ; Counter for loop \n" ^
-        "\t" ^ "sub r12, r13 ; <nArgs> - <nParams> = |Opt list| = 2 \n" ^
-        "\t" ^ "mov r9, const_tbl + 1 ; Nil, for first pair \n" ^
-        "\t" ^ "mov r14, 0 ; Comparator for loop condition \n" ^
-        "\t" ^ ";; TODO: check if this case is necessary \n" ^
-	      "\t" ^ "cmp r13, 0 ; <nParams> = 0, Variadic case \n" ^
-	      "\t" ^ "jne .non_variadic \n" ^
-	      "\t" ^ "sub r12, 1 \n" ^
-	      "\t" ^ "sub r14, 1 \n" ^
-        "\t" ^ ".non_variadic: \n" ^
-        "\t" ^ "cmp r13, 2 ; if |Params| < 2 \n" ^
-        "\t" ^ "jl .create_opt_list ; jump \n" ^
-        "\t" ^ "add r12, 1 ; Counter for loop \n" ^
-        "\t" ^ "add r14, 1 ; Comparator for loop condition \n" ^
-        "\t" ^ ".create_opt_list: \n" ^
-        "\t" ^ "cmp r12, r14 ; Loop condition \n" ^
+        (* Explain change: Pushed Magic as Nil at end of Params to sign end of Params List of Opt *)
+        (* "\t" ^ "mov r15, rcx ; <nArgs> \n" ^ *)
+        "\t" ^ "mov r15, " ^ (string_of_int len) ^ " ; Start From Last Param \n" ^
+        (* "\t" ^ "add r15, -1 ; <nArgs> - 1 \n" ^ *)
+        "\t" ^ "mov r9, const_tbl + 1 ; Nil, for first pair \n\n" ^
+        "\t" ^ ".create_opt_list: \n " ^
+        "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param \n " ^
+        "\t" ^ "cmp r8, const_tbl+1 ;; If Magic, is Last Param \n" ^
         "\t" ^ "je .done_create_opt_list \n" ^
-        "\t" ^ "mov r8, PVAR(r15) ;; CHANGED r15* \n" ^
-        "\t" ^ "add r15, -1 ; dec each iter \n" ^
-        "\t" ^ "dec r12 ; Loop counter \n" ^
-        "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
+        "\t" ^ "add r15, 1 ; Dec each Iter \n" ^ (* Changed from -1 (start from first to last) *)
+        "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^ (* List will be now Reversed : | *)
         "\t" ^ "mov r9, rax ; Caten to next List \n" ^
-        "\t" ^ "jmp .create_opt_list \n" ^
+        "\t" ^ "jmp .create_opt_list \n\n" ^    
         "\t" ^ ".done_create_opt_list: \n" ^
-        "\t" ^ "mov rax, r9 ; By default Nil \n " ^
+        "\t" ^ "mov rax, r9 ; By default Nil \n" ^
         "\t" ^ "mov r10, rbp ; Put list in Opt loc \n" ^
+        "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; |Params| \n" ^
         "\t" ^ "shl r13, 3 ; <nParams> * 8 \n" ^
         "\t" ^ "add r10, r13 ; rbp + <sizeParams> \n" ^
         "\t" ^ "add r10, 8 * 4  \n" ^
@@ -278,6 +265,7 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "leave ; done parsing lambdaOpt body above \n" ^
         "\t" ^ "ret\n" ^
         "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
+
       (* Helper function, for generate LambdaOpt *)
       let assemOpt vars opt body curr_count curr_env len = 
         "\t" ^ "lambdaOpt" ^ (string_of_int curr_count) ^ ":\n" ^ 
@@ -387,19 +375,23 @@ module Code_Gen : CODE_GEN = struct
         let (curr_count, curr_env) = (!count, !env_count) in
         count := !count + 1;
         env_count := !env_count + 1;
-        let len = !prev_args in
+        let len = !prev_params in
         let out = "\n"^(assemLambda vars body curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
         env_count := !env_count - 1; out
     | LambdaOpt'(vars, opt, body) -> 
         let (curr_count, curr_env) = (!count, !env_count) in
         count := !count + 1;
         env_count := !env_count + 1;
-        let len = !prev_args in
+        let len = !prev_params in
         let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
         env_count := !env_count - 1; out
     | Applic'(op, args) | ApplicTP'(op, args) -> 
-        let args = List.rev args in
+        let args = List.rev args in 
         let len = List.length args in
+        let rcxLen = if (!prev_args > len)
+          then (!prev_args) (* TODO: check if use nArgs at Lambdas / Applic's, if sure that not => remove it *)
+          else len in (* for Opt args, check if works, otherwise: Opposite *)
+        prev_args := len;
         let current = !count in
         count := !count + 1;
         let rec applic_rec args =
@@ -409,7 +401,7 @@ module Code_Gen : CODE_GEN = struct
             "\t" ^ "push rax\n" ^ 
             applic_rec cdr
           | [] -> 
-            "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; number of arguments \n" ^
+            "\t" ^ "mov rcx, " ^ (string_of_int rcxLen) ^ " ; number of arguments \n" ^
             "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n" ^
             (generate consts fvars op) ^
             "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^
@@ -420,13 +412,15 @@ module Code_Gen : CODE_GEN = struct
             "\tshl rbx, 3 ; rbx = rbx * 8\n" ^
             "\tadd rsp, rbx ; pop args\n"
         in 
+        (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
         "\n\t" ^ "mov rax, const_tbl + 1 ; applic \n" ^
-        "\t" ^ "push rax ; Nil as Magic \n" ^
+        "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
         (applic_rec args)
     | ApplicTP'(op, args) -> 
         (* Idea: for apply, if op is <apply> => do not do (List.rev args), for push args in same order, in apply *)
-        let args = List.rev args in
+        let args = List.rev args in 
         let len = List.length args in
+        prev_args := len;
         let rec applicTP_rec args =
           match args with
             | car :: cdr -> 
@@ -446,8 +440,9 @@ module Code_Gen : CODE_GEN = struct
               "\t" ^ "mov rbp, r15 \n" ^
               "\t" ^ "jmp r10 ; clousre's code \n"
         in 
-        "\t" ^ "mov rax, const_tbl + 1 ;  applic tail position \n" ^
-        "\t" ^ "push rax \n" ^
+        (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
+        "\t" ^ "mov rax, const_tbl + 1 ; applic tail position \n" ^
+        "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
         (applicTP_rec args)
     | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
