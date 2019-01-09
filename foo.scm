@@ -2179,16 +2179,141 @@
 ; ((6 4 3 7 8 2 1 9 11 10 2 4 5.5      3.3      7) (66 33 44 55 232432 24234))
 
 
-(define (revall L)
-    (if (null? L)
-            L
-    (let ((E (if (list? (car L))
-        (revall (car L))
-        (car L) )))
-        (append (revall (cdr L))
-            (list E))
-                )
-                    ))
-(revall '( (1 2) (3 4)))
+;; (define (revall L)
+;;     (if (null? L)
+;;             L
+;;     (let ((E (if (list? (car L))
+;;         (revall (car L))
+;;         (car L) )))
+;;         (append (revall (cdr L))
+;;             (list E))
+;;                 )
+;;                     ))
+;; (revall '( (1 2) (3 4)))
 ; ((4 3) (2 1))
-; 
+; ((4 3) (2 1))
+
+;; (define (distrib L E)
+;; (if (null? L)
+;;         '()
+;;     (cons (cons E (car L))
+;;         (distrib (cdr L) E))
+;;         )
+;;             )
+
+;; (define (extend L E)
+;;     (append L (distrib L E)))
+
+;; (define (subsets L)
+;;     (if (null? L)
+;;             (list '())
+;;             (extend (subsets (cdr L))
+;;             (car L))
+;;                     ))
+
+;; (subsets '(1 2) )
+;; ;(() (2) (1) (1 2))
+;; ;(() (2) (1) (1 2))
+;; (subsets '(1 2 3))
+;(() (3) (2) (2 3) (1) (1 3) (1 2) (1 2 3))
+;(() (3) (2) (2 3) (1) (1 3) (1 2) (1 2 3))
+
+;; (letrec ((loop (lambda (r)
+;;         (if (= r 0)
+;;             0
+;;             (loop (- r 1))))))
+;; (loop 220000))
+; 0
+; sig fault
+
+;; (apply - `(3 ,@(append '(4 4) '(4))))
+;; ; -9
+;; ; -1
+
+;; (define foo (lambda (x)
+;;             (let ((x (+ x 1)))
+;;             (lambda (y)
+;;                 (let ((y (+ y 1)))
+;;                 (lambda (z) 
+;;                     (+ x y z)))))))
+                    
+;; (define f1 (foo 1))
+;; (define f12 (f1 2))
+;; (f12 3)
+;; ; 8
+;; ; 5
+
+;; (map map (list 
+;;             (lambda (x) (+ x x)) 
+;;             (lambda (x) (- x))
+;;             (lambda (x) (* x x)) 
+;;             (lambda (x)  (/ x)))
+;;     '((1 2) (3 4) (5.0 6.0) (16.0 8.0)))
+;((2 4) (-3 -4) (25.0 36.0) (0.0625 0.125))
+;sig fault
+
+;; (define foo (lambda (n) 
+;;                 (if (= n 0)
+;;                     'finish
+;;                     (foo (- n 1))
+;;                 )
+;;                 )
+;;                 )
+
+;;         (foo 1000000)
+; sig fault
+
+;; (define mat-sca-mul
+;; (lambda (x m)
+;;     (let* ([nr (matrix-rows m)]
+;;         [nc (matrix-columns m)]
+;;         [r (make-matrix nr nc)])
+;;         (letrec ([loop (lambda (i)
+;;         (if (= i nr)
+;;             (begin r)
+;;             (begin
+;;                 (letrec ([loop2 (lambda (j)
+;;                 (if (= j nc)
+;;                     #t
+;;                     (begin
+;;                         (matrix-set! r i j (* x (matrix-ref m i j)))
+;;                         (loop2 (+ j 1)))))])
+;; (loop2 0))
+;;                 (loop (+ i 1)))))])
+;; (loop 0)))))
+; exception not found
+
+
+;; (define mat-sca-mul
+;; (lambda (x m)
+;;     (let* ((nr (matrix-rows m))
+;;         (nc (matrix-columns m))
+;;         (r (make-matrix nr nc)))
+;;         (letrec ((loop (lambda (i)
+;;         (if (= i nr)
+;;             (begin r)
+;;             (begin
+;;                 (letrec ((loop2 (lambda (j)
+;;                 (if (= j nc)
+;;                     #t
+;;                     (begin
+;;                         (matrix-set! r i j (* x (matrix-ref m i j)))
+;;                         (loop2 (+ j 1)))))))
+;; (loop2 0))
+;;                 (loop (+ i 1)))))))
+;; (loop 0)))))
+
+;; (+) ; 0
+;; (apply * '(1 2))
+
+;; (apply + 1.0 2.0 3.0 '()) ; 6.0
+;3.000000
+
+;; (apply + '(1 2 3)) ; 6
+; 3
+
+;; (+ 1.0 2.0)
+
+;; (apply + '(1 2))
+
+;; (* 1 2)

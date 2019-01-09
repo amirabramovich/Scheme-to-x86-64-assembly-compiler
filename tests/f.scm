@@ -6301,7 +6301,7 @@
 (cons (cons E (car L))
 (distrib (cdr L) E))
 )
-) 
+)
 
 (define (extend L E)
 (append L (distrib L E))
@@ -6348,9 +6348,9 @@
                 (lambda (z) 
                     (+ x y z)))))))
                     
-        (define f1 (foo 1))
-        (define f12 (f1 2))
-        (f12 3)
+(define f1 (foo 1))
+(define f12 (f1 2))
+(f12 3)
 			
 		
 ;; 413

@@ -1,6 +1,7 @@
 
 apply:
     push rbp
+    ; mov rbx, qword[rbp] ; C
     mov rbp, rsp
     
     mov rcx, 2
@@ -76,7 +77,7 @@ apply:
     push r9 ; push
     mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
     push qword [rbp + 8] ; old ret addr
-    mov r15, qword[rbp]    
+    mov r15, qword[rbp] ; C
     add rdx, 5 ; <newLen> + 5
     
     ; Macro Shift_Frame
@@ -106,7 +107,8 @@ apply:
 	shl r8, 3
 	add rsp, r8 ; End Macro
 
-    mov rbp, r15
+    mov rbp, r15 ; C (rbx)
+    ; mov rbp, rbx
     jmp r10 ; code
   
 .return:
