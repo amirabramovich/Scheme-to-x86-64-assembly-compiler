@@ -2405,6 +2405,10 @@ ocaml compiler.ml compilerTest.scm > compilerTest.s
 nasm -felf64 -o compilerTest.o compilerTest.s
 gcc -m64 -static -o compilerTest compilerTest.o
 
+******
+
+nasm -felf64 -o foo.o foo.s
+gcc -m64 -static -o foo foo.o
 
 ***
 Helper debug-

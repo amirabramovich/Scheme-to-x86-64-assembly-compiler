@@ -1797,3 +1797,270 @@
 ;; T_69
 ;; (append '(1 2 3) '() '(1 2 . 3))            ; (1 . (2 . (3 . (1 . (2 . 3)))))
 
+;; (define fact
+;;   (let ((x (lambda (x)
+;; 	     ((x (lambda (x) (lambda (y) (lambda (z) ((x z) (y z))))))
+;; 	      (lambda (x) (lambda (y) x)))))
+;; 	(->
+;; 	 ((lambda (x) (x x))
+;; 	  (lambda (->)
+;; 	    (lambda (n)
+;; 	      (if (zero? n)
+;; 		  (lambda (x) (lambda (y) y))
+;; 		  (let ((z ((-> ->) (- n 1))))
+;; 		    (lambda (x)
+;; 		      (lambda (y)
+;; 			(x ((z x) y)))))))))))
+;;     (lambda (n)
+;;       ((((((((x (x (x (x x)))) (((x (x (x (x x)))) ((x (x (x x))) (x
+;;       (x (x (x x)))))) (((x (x (x (x x)))) ((x (x (x x))) (x (x (x x
+;;       ))))) (x (x (x (x x))))))) ((x (x (x x))) (x (x (x x))))) ((((
+;;       (x (x (x (x x)))) (((x (x (x (x x)))) ((x (x (x x))) (x (x (x
+;;       (x x)))))) (((x (x (x (x x)))) ((x (x (x x))) (x (x (x x)))))
+;;       (x (x (x (x x))))))) ((x (x (x x))) (x (x (x x))))) (((((x (x
+;;       (x (x x)))) (((x (x (x (x x)))) ((x (x (x x))) (x (x (x (x x))
+;;       )))) (((x (x (x (x x)))) ((x (x (x x))) (x (x (x x))))) (x (x
+;;       (x (x x))))))) ((x (x (x x))) (x (x (x x))))) (((x (x (x (x x)
+;;       ))) (x (x (x x)))) (x (x (x x))))) (((x (x (x(x x)))) (((((x (
+;;       x (x (x x)))) ((x (x (x x))) (x (x (x (x x)))))) (x (x (x x)))
+;;       ) (((x (x (x (x x)))) ((x (x (x x))) (((x(x (x (x x)))) (((x (
+;;       x (x (x x)))) ((x (x (x x))) (x (x (x (x x)))))) (((x (x (x (x
+;;       x)))) ((x (x (x x))) (x (x (x x))))) (x(x (x (x x))))))) ((x (
+;;       x (x x))) (x (x (x x))))))) ((((x (x(x (x x)))) (((x (x (x (x
+;;       x)))) ((x (x (x x))) (x (x (x (x x)))))) (((x (x (x (x x)))) (
+;;       (x (x (x x))) (x (x (x x))))) (x(x (x (x x))))))) ((x (x (x x)
+;;       )) (x (x (x x))))) (((x (x (x (x x)))) (x (x (x x)))) (x (x (x
+;;       x))))))) (((((x (x (x (x x)))) ((x (x (x x))) (x (x (x (x x)))
+;;       ))) (x (x (x x)))) ((x (x(x (x x)))) (((x (x (x (x x)))) ((x (
+;;       x (x x))) (x (x (x (x x)))))) (x (x (x x)))))) (((((x (x (x (x
+;;       x)))) (((x (x (x (x x)))) ((x (x (x x))) (x (x (x (x x)))))) (
+;;       ((x (x (x (x x)))) ((x (x (x x))) (x (x (x x))))) (x (x (x (x
+;;       x))))))) ((x (x (x x))) (x (x (x x))))) (((x (x (x (x x)))) (x
+;;       (x (x x)))) (x (x (x x))))) (x (x (x x))))))) (((x (x (x (x x)
+;;       ))) (((((x (x (x (x x)))) ((x (x (x x))) (x (x (x (x x)))))) (
+;;       x(x (x x)))) (((x(x (x (x x)))) ((x (x (x x))) (x (x (x (x x))
+;;       )))) (x (x (x x))))) (((((x (x (x (x x)))) (((x (x (x (x x))))
+;;       ((x (x (x x)))(x (x (x (x x)))))) (((x (x (x (x x)))) ((x (x (
+;;       x x))) (x (x(x x))))) (x (x (x (x x))))))) ((x (x (x x))) (x (
+;;       x (x x)))))(((x (x (x (x x)))) (x (x (x x)))) (x (x (x x)))))
+;;       (x (x (x x)))))) (((((x (x (x (x x)))) (((x (x (x (x x)))) ((x
+;;       (x (x x)))(x (x (x (x x)))))) (((x (x (x (x x)))) ((x (x (x x)
+;;       )) (x (x(x x))))) (x (x (x (x x))))))) ((x (x (x x))) (x (x (x
+;;       x)))))(((x (x (x (x x)))) (x (x (x x)))) (x (x (x x))))) ((x (
+;;       x (x x))) (((x (x (x (x x)))) (x (x (x x)))) (x (x (x x)))))))
+;;       )))(((((x (x (x (x x)))) ((x (x (x x))) (((x (x (x (x x)))) ((
+;;       (x(x (x (x x)))) ((x (x (x x))) (x (x (x (x x)))))) (((x (x (x
+;;       (x x)))) ((x (x (x x))) (x (x (x x))))) (x (x (x (x x)))))))((
+;;       x (x (x x))) (x (x (x x))))))) ((((x (x (x (x x)))) (((x (x(x
+;;       (x x)))) ((x (x (x x))) (x (x (x (x x)))))) (((x (x (x (x x)))
+;;       )((x (x (x x))) (x (x (x x))))) (x (x (x (x x))))))) ((x(x (x
+;;       x))) (x (x (x x))))) (((x (x (x (x x)))) (x (x (x x))))(x (x (
+;;       x x)))))) (((x (x (x (x x)))) (((x (x (x (x x)))) ((x (x (x x)
+;;       ))(x (x (x (x x)))))) (x (x (x x))))) ((x (x (x x)))(((x (x (x
+;;       (x x)))) (x (x (x x)))) (x (x (x x))))))) (((x (x(x (x x)))) (
+;;       ((x (x (x (x x)))) ((x (x (x x))) (x (x (x (x x)))))) (x (x (x
+;;       x))))) ((x (x (x x))) (((x (x (x (x x)))) (x(x (x x)))) (x (x
+;;       (x x))))))))) ((x (x (x x))) (((x (x (x (x x)))) (x (x (x x)))
+;;       )(x (x (x x))))))
+;; 	 (-> n))
+;; 	(lambda (x) (+ x 1))) 0))))
+
+;; (fact 5)
+;; ; 120   
+
+;; T_0_Mayer
+;; (((((lambda (a)
+;;       (lambda (b)
+;;         (((lambda (a) (lambda (b) ((a b) (lambda (x) (lambda (y) y)))))
+;; 	  ((lambda (n)
+;; 	     ((n (lambda (x) (lambda (x) (lambda (y) y))))
+;; 	      (lambda (x) (lambda (y) x))))
+;; 	   (((lambda (a)
+;; 	       (lambda (b)
+;; 		 ((b (lambda (n)
+;; 		       ((lambda (p) (p (lambda (a) (lambda (b) b))))
+;; 			((n (lambda (p)
+;; 			      (((lambda (a)
+;; 				  (lambda (b) (lambda (c) ((c a) b))))
+;; 				((lambda (n)
+;; 				   (lambda (s)
+;; 				     (lambda (z) (s ((n s) z)))))
+;; 				 ((lambda (p)
+;; 				    (p (lambda (a) (lambda (b) a))))
+;; 				  p)))
+;; 			       ((lambda (p)
+;; 				  (p (lambda (a) (lambda (b) a))))
+;; 				p))))
+;; 			 (((lambda (a)
+;; 			     (lambda (b) (lambda (c) ((c a) b))))
+;; 			   (lambda (x) (lambda (y) y)))
+;; 			  (lambda (x) (lambda (y) y)))))))
+;; 		  a)))
+;; 	     a)
+;; 	    b)))
+;; 	 ((lambda (n)
+;; 	    ((n (lambda (x) (lambda (x) (lambda (y) y))))
+;; 	     (lambda (x) (lambda (y) x))))
+;; 	  (((lambda (a)
+;; 	      (lambda (b)
+;; 		((b (lambda (n)
+;; 		      ((lambda (p) (p (lambda (a) (lambda (b) b))))
+;; 		       ((n (lambda (p)
+;; 			     (((lambda (a)
+;; 				 (lambda (b) (lambda (c) ((c a) b))))
+;; 			       ((lambda (n)
+;; 				  (lambda (s)
+;; 				    (lambda (z) (s ((n s) z)))))
+;; 				((lambda (p)
+;; 				   (p (lambda (a) (lambda (b) a))))
+;; 				 p)))
+;; 			      ((lambda (p)
+;; 				 (p (lambda (a) (lambda (b) a))))
+;; 			       p))))
+;; 			(((lambda (a)
+;; 			    (lambda (b) (lambda (c) ((c a) b))))
+;; 			  (lambda (x) (lambda (y) y)))
+;; 			 (lambda (x) (lambda (y) y)))))))
+;; 		 a)))
+;; 	    b)
+;; 	   a)))))
+;;     ((lambda (n)
+;;        ((lambda (p) (p (lambda (a) (lambda (b) b))))
+;; 	((n (lambda (p)
+;; 	      (((lambda (a) (lambda (b) (lambda (c) ((c a) b))))
+;; 		((lambda (n) (lambda (s) (lambda (z) (s ((n s) z)))))
+;; 		 ((lambda (p) (p (lambda (a) (lambda (b) a)))) p)))
+;; 	       (((lambda (a)
+;; 		   (lambda (b)
+;; 		     ((b (a (lambda (a)
+;; 			      (lambda (b)
+;; 				((a (lambda (n)
+;; 				      (lambda (s)
+;; 					(lambda (z) (s ((n s) z))))))
+;; 				 b)))))
+;; 		      (lambda (x) (lambda (y) y)))))
+;; 		 ((lambda (p) (p (lambda (a) (lambda (b) a)))) p))
+;; 		((lambda (p) (p (lambda (a) (lambda (b) b)))) p)))))
+;; 	 (((lambda (a) (lambda (b) (lambda (c) ((c a) b))))
+;; 	   (lambda (x) x))
+;; 	  (lambda (x) x)))))
+;;      (lambda (x) (lambda (y) (x (x (x (x (x y)))))))))
+;;    (((lambda (a)
+;;        (lambda (b)
+;; 	 ((b (a (lambda (a)
+;; 		  (lambda (b)
+;; 		    ((a (lambda (n)
+;; 			  (lambda (s) (lambda (z) (s ((n s) z))))))
+;; 		     b)))))
+;; 	  (lambda (x) (lambda (y) y)))))
+;;      (((lambda (a)
+;; 	 (lambda (b)
+;; 	   ((b (a (lambda (a)
+;; 		    (lambda (b)
+;; 		      ((a (lambda (n)
+;; 			    (lambda (s) (lambda (z) (s ((n s) z))))))
+;; 		       b)))))
+;; 	    (lambda (x) (lambda (y) y)))))
+;;        ((lambda (x) (lambda (y) (x (x (x y)))))
+;; 	(lambda (x) (lambda (y) (x (x y))))))
+;;       (lambda (x) (lambda (y) (x (x (x y)))))))
+;;     (lambda (x) (lambda (y) (x (x (x (x (x y)))))))))
+;;   #t)
+;;  #f)
+;;  ; #t
+
+;; T_01_Mayer
+;; ((lambda (x) (x x 10000))
+;;  (lambda (x n)
+;;    (if (zero? n) #t
+;;        (x x (- n 1)))))
+;; ; #t
+
+
+;; (define with (lambda (s f) (apply f s)))
+
+;; (define crazy-ack
+;;   (letrec ((ack3
+;; 	    (lambda (a b c)
+;; 	      (cond
+;; 	       ((and (zero? a) (zero? b)) (+ c 1))
+;; 	       ((and (zero? a) (zero? c)) (ack-x 0 (- b 1) 1))
+;; 	       ((zero? a) (ack-z 0 (- b 1) (ack-y 0 b (- c 1))))
+;; 	       ((and (zero? b) (zero? c)) (ack-x (- a 1) 1 0))
+;; 	       ((zero? b) (ack-z (- a 1) 1 (ack-y a 0 (- c 1))))
+;; 	       ((zero? c) (ack-x (- a 1) b (ack-y a (- b 1) 1)))
+;; 	       (else (ack-z (- a 1) b (ack-y a (- b 1) (ack-x a b (- c 1))))))))
+;; 	   (ack-x
+;; 	    (lambda (a . bcs)
+;; 	      (with bcs
+;; 		(lambda (b c)
+;; 		  (ack3 a b c)))))
+;; 	   (ack-y
+;; 	    (lambda (a b . cs)
+;; 	      (with cs
+;; 		(lambda (c)
+;; 		  (ack3 a b c)))))
+;; 	   (ack-z
+;; 	    (lambda abcs
+;; 	      (with abcs
+;; 		(lambda (a b c)
+;; 		  (ack3 a b c))))))
+;;     (lambda ()
+;;       (and (= 7 (ack3 0 2 2))
+;; 	   (= 61 (ack3 0 3 3))
+;; 	   (= 316 (ack3 1 1 5))
+;; 	   (= 636 (ack3 2 0 1))
+;; 	   ))))
+
+;; (crazy-ack)
+; #t
+
+;; T_05_M
+;; (((((lambda (x) (x (x x)))
+;;     (lambda (x)
+;;       (lambda (y)
+;; 	(x (x y)))))
+;;    (lambda (p)
+;;      (p (lambda (x)
+;; 	  (lambda (y)
+;; 	    (lambda (z)
+;; 	      ((z y) x)))))))
+;;   (lambda (x)
+;;     ((x #t) #f)))
+;;  (lambda (x)
+;;    (lambda (y)
+;;      x)))
+;; #t
+
+;; (define even?
+;;   (letrec ((even-1?
+;; 	    (lambda (n)
+;; 	      (or (zero? n)
+;; 		  (odd-2? (- n 1) 'odd-2))))
+;; 	   (odd-2?
+;; 	    (lambda (n _)
+;; 	      (and (positive? n)
+;; 		   (even-3? (- n 1) (+ n n) (+ n n n)))))
+;; 	   (even-3?
+;; 	    (lambda (n _1 _2)
+;; 	      (or (zero? n)
+;; 		  (odd-5? (- n 1) (+ n n) (* n n) 'odd-5 'odder-5))))
+;; 	   (odd-5?
+;; 	    (lambda (n _1 _2 _3 _4)
+;; 	      (and (positive? n)
+;; 		   (even-1? (- n 1))))))
+;;     even-1?))
+
+;; (even? 100)
+
+(append '(1 2 3) '() '(1 2 . 3))            ; (1 . (2 . (3 . (1 . (2 . 3)))))
+; (1 2 3 1 2 . 3)
+; (1 2 3 1 2 . 3)
+
+;; (append '() '(1)) ; (1)
+; ()
+
+;; (apply (lambda x x) '() '(1)) ; (() 1)
+; ()
+
+;; ((lambda x x) 1)

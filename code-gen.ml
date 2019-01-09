@@ -243,10 +243,10 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ ";; Closure Body \n" ^ 
         "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; Start From Last Param \n" ^
         "\t" ^ "mov r15, r13 ; Save last Param Idx \n" ^
-	      "\t" ^ "mov r9, const_tbl + 1 ; Nil, for first pair \n" ^
+	      "\t" ^ "mov r9, const_tbl+1 ; Nil, for first pair \n" ^
         "\t" ^ ".get_opt_args: \n" ^
  	      "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
-        "\t" ^ "cmp r8, const_tbl+1 ; If Magic, is Last Param \n" ^
+        "\t" ^ "cmp r8, 6666 ; If Magic, is Last Param \n" ^
 	      "\t" ^ "je .create_opt_list \n" ^
         "\t" ^ "add r15, 1 ; Add each Iter, till reach Idx Last Arg in Opt List \n" ^
 	      "\t" ^ "jmp .get_opt_args \n" ^
@@ -382,7 +382,7 @@ module Code_Gen : CODE_GEN = struct
           count := !count + 1;
           env_count := !env_count + 1;
           let len = !prev_params in
-          let out = "\n"^(assemLambda vars body curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
+          let out = "\n" ^ (assemLambda vars body curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
           env_count := !env_count - 1; out
       | LambdaOpt'(vars, opt, body) -> 
           let (curr_count, curr_env) = (!count, !env_count) in
@@ -408,22 +408,21 @@ module Code_Gen : CODE_GEN = struct
               applic_rec cdr
             | [] -> 
               "\t" ^ "mov rcx, " ^ (string_of_int rcxLen) ^ " ; number of arguments \n" ^
-              "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below:\n" ^
+              "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below: \n" ^
               (generate consts fvars op) ^
-              "\tmov rbx, [rax+TYPE_SIZE] ; closure's env\n" ^
-              "\tpush rbx ; push env\n" ^
-              "\tmov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code\n" ^
-              "\tcall rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count\n" ^
-              "\tinc rbx\n" ^
-              "\tshl rbx, 3 ; rbx = rbx * 8\n" ^
-              "\tadd rsp, rbx ; pop args\n"
+              "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env \n" ^
+              "\t" ^ "push rbx ; push env \n" ^
+              "\t" ^ "mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code \n" ^
+              "\t" ^ "call rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count \n" ^
+              "\t" ^ "inc rbx\n" ^
+              "\t" ^ "shl rbx, 3 ; rbx = rbx * 8\n" ^
+              "\t" ^ "add rsp, rbx ; pop args \n"
           in 
-          (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
-          "\n\t" ^ "mov rax, const_tbl + 1 ; applic \n" ^
-          "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
+          (* Explain use: push 6666 Magic at end, sign for EndArgs of LambdaOpt *)
+          "\n\t" ^ "mov rax, 6666 ; applic \n" ^
+          "\t" ^ "push rax ; 6666 As Magic, At the End of Args \n" ^
           (applic_rec args)
       | ApplicTP'(op, args) -> 
-          (* Idea: for apply, if op is <apply> => do not do (List.rev args), for push args in same order, in apply *)
           let args = List.rev args in 
           let len = List.length args in
           prev_args := len;
@@ -446,9 +445,9 @@ module Code_Gen : CODE_GEN = struct
                 "\t" ^ "mov rbp, r15 \n" ^
                 "\t" ^ "jmp r10 ; clousre's code \n"
           in 
-          (* Explain use: push Nil Magic at end, sign for EndArgs of LambdaOpt *)
-          "\t" ^ "mov rax, const_tbl + 1 ; applic tail position \n" ^
-          "\t" ^ "push rax ; Nil As Magic, At the End of Args \n" ^
+          (* Explain use: push 6666 Magic at end, sign for EndArgs of LambdaOpt *)
+          "\t" ^ "mov rax, 6666 ; applic tail position \n" ^
+          "\t" ^ "push rax ; 6666 As Magic, At the End of Args \n" ^
           (applicTP_rec args)
       | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
 
