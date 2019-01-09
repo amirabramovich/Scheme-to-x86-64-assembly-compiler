@@ -1403,3 +1403,55 @@ let c52 = (run_semantics (tag_parse_expression (read_sexpr "
                 (loop (+ i 1)))))))
 (loop 0)))))
 ")));;
+
+let c53 =  (tag_parse_expression (read_sexpr "
+(define +
+  (let ((null? null?)(+ +)(car car)(apply apply)(cdr cdr))
+    (letrec ((loop (lambda x (if (null? x) 0 (+ (car x) (apply loop (cdr x)))))))
+      loop)))
+      "));;
+      
+(* Def' (Var' (VarFree "+"),
+      Applic'
+       (LambdaSimple' (["null?"; "+"; "car"; "apply"; "cdr"],
+         ApplicTP'
+          (LambdaSimple' (["loop"],
+            Seq'
+             [Set' (Var' (VarParam ("loop", 0)), Box' (VarParam ("loop", 0)));
+              Seq'
+               [BoxSet' (VarParam ("loop", 0),
+                 LambdaOpt' ([], "x",
+                  If'
+                   (Applic' (Var' (VarBound ("null?", 1, 0)),
+                     [Var' (VarParam ("x", 0))]),
+                   Const' (Sexpr (Number (Int 0))),
+                   ApplicTP' (Var' (VarBound ("+", 1, 1)),
+                    [Applic' (Var' (VarBound ("car", 1, 2)),
+                      [Var' (VarParam ("x", 0))]);
+                     Applic' (Var' (VarBound ("apply", 1, 3)),
+                      [BoxGet' (VarBound ("loop", 0, 0));
+                       Applic' (Var' (VarBound ("cdr", 1, 4)),
+                        [Var' (VarParam ("x", 0))])])]))));
+                BoxGet' (VarParam ("loop", 0))]]),
+          [Const' (Sexpr (Symbol "whatever"))])),
+       [Var' (VarFree "null?"); Var' (VarFree "+"); Var' (VarFree "car");
+        Var' (VarFree "apply"); Var' (VarFree "cdr")])) *)
+
+
+        (* Def (Var "+",
+        Applic
+         (LambdaSimple (["null?"; "+"; "car"; "apply"; "cdr"],
+           Applic
+            (LambdaSimple (["loop"],
+              Seq
+               [Set (Var "loop",
+                 LambdaOpt ([], "x",
+                  If (Applic (Var "null?", [Var "x"]),
+                   Const (Sexpr (Number (Int 0))),
+                   Applic (Var "+",
+                    [Applic (Var "car", [Var "x"]);
+                     Applic (Var "apply",
+                      [Var "loop"; Applic (Var "cdr", [Var "x"])])]))));
+                Var "loop"]),
+            [Const (Sexpr (Symbol "whatever"))])),
+         [Var "null?"; Var "+"; Var "car"; Var "apply"; Var "cdr"])) *)

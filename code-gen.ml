@@ -252,10 +252,13 @@ module Code_Gen : CODE_GEN = struct
 	      "\t" ^ "jmp .get_opt_args \n" ^
         "\t" ^ ".create_opt_list: \n" ^
         "\t" ^ "add r15, -1 ; Dec each Iter \n" ^
-        "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^
-        "\t" ^ "jl .done_create_opt_list \n" ^
         "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
+        (* Move check to below *)
+        "\t" ^ "cmp r8, const_tbl+1 ; Param is Nil \n" ^
+        "\t" ^ "je .done_create_opt_list \n " ^ (* Added 2 lines, if param Nil => jmp, for return only Nil (Not Pair(Nil, Nil)) *)
         "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
+        "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^
+        "\t" ^ "jl .done_create_opt_list \n" ^ (* Revert to jl (jle) *)
         "\t" ^ "mov r9, rax ; Caten to next List \n " ^
         "\t" ^ "jmp .create_opt_list \n" ^         
         "\t" ^ ".done_create_opt_list: \n" ^
@@ -354,7 +357,7 @@ module Code_Gen : CODE_GEN = struct
                               (generate consts fvars dif) ^ 
                               "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
       | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; BoxGet, VarParam \n" ^ 
-                                    "\t" ^ "mov rax, qword [rax]" ^ "\n"
+                                     "\t" ^ "mov rax, qword [rax]" ^ "\n"
       | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ;  BoxGet, VarBound \n" ^
                                             "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
                                             "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
