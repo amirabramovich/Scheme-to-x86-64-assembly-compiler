@@ -252,15 +252,15 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
         (* Move check to below *)                               
         "\t" ^ "cmp r8, const_tbl+1 ; Param is Nil \n" ^             (* Added 2 lines, if param Nil, jmp to .check_bounds *)
-        "\t" ^ "je .check_bounds  ; C (.done_create_opt_list) \n " ^ (* (and there, one more check, for "bounds") *)
+        "\t" ^ "; je .check_bounds   \n " ^ (* (and there, one more check, for "bounds") *)
         "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
         "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^
         "\t" ^ "jl .done_create_opt_list \n" ^ (* Revert to jl (jle) *)
         "\t" ^ "mov r9, rax ; Caten to next List \n " ^
         "\t" ^ "jmp .create_opt_list \n" ^ 
-        "\t" ^ ".check_bounds: ; A \n" ^ (* Add one more check, if got Nil, check if Idx is Bounded *)
-        "\t" ^ "cmp r15, r13 ; A \n" ^   (* (different (if diff, should be abobe => in bounds) r13 = # <StartOptListIdx>) *)
-        "\t" ^ "jne .create_opt_list ; A \n" ^
+        "\t" ^ ".check_bounds:  \n" ^ (* Add one more check, if got Nil, check if Idx is Bounded *)
+        "\t" ^ "cmp r15, r13 \n" ^   (* (different (if diff, should be abobe => in bounds) r13 = # <StartOptListIdx>) *)
+        "\t" ^ "jne .create_opt_list \n" ^
         "\t" ^ ".done_create_opt_list: \n" ^
         "\t" ^ "mov rax, r9 ; By default Nil \n" ^
         "\t" ^ "mov r10, rbp ; Put list in Opt loc \n" ^
@@ -392,7 +392,7 @@ module Code_Gen : CODE_GEN = struct
           let len = !prev_params in
           let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
           env_count := !env_count - 1; out
-      | Applic'(op, args) | ApplicTP'(op, args) -> 
+      | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
           let args = List.rev args in 
           let len = List.length args in
           (* TODO: check if use nArgs at Lambdas / Applic's, if sure that not => remove it *)

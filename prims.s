@@ -35,8 +35,8 @@ apply:
 .end_push_list:
     cmp rdx, 1
     jne .non_empty
-    push r11 ; if empty
-    inc rdx 
+    ; push r11 ; if empty
+    ; inc rdx 
 
 .non_empty:
     mov r10, rsp

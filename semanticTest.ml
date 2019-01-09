@@ -1471,3 +1471,81 @@ let c54 = (run_semantics (tag_parse_expression (read_sexpr "
                           g) ls)))))
        f) '() args))))
        ")));;
+(* 
+       Def' (Var' (VarFree "append"),
+       Applic'
+        (LambdaSimple' (["null?"; "car"; "cdr"; "cons"],
+          LambdaOpt' ([], "args",
+           ApplicTP'
+            (Applic'
+              (LambdaSimple' (["f"],
+                Seq'
+                 [Set' (Var' (VarParam ("f", 0)), Box' (VarParam ("f", 0)));
+                  Seq'
+                   [BoxSet' (VarParam ("f", 0),
+                     LambdaSimple' (["ls"; "args"],
+                      If'
+                       (Applic' (Var' (VarBound ("null?", 2, 0)),
+                         [Var' (VarParam ("args", 1))]),
+                       Var' (VarParam ("ls", 0)),
+                       ApplicTP'
+                        (Applic'
+                          (LambdaSimple' (["g"],
+                            Seq'
+                             [Set' (Var' (VarParam ("g", 0)),
+                               Box' (VarParam ("g", 0)));
+                              Seq'
+                               [BoxSet' (VarParam ("g", 0),
+                                 LambdaSimple' (["ls"],
+                                  If'
+                                   (Applic' (Var' (VarBound ("null?", 4, 0)),
+                                     [Var' (VarParam ("ls", 0))]),
+                                   ApplicTP' (BoxGet' (VarBound ("f", 2, 0)),
+                                    [Applic' (Var' (VarBound ("car", 4, 1)),
+                                      [Var' (VarBound ("args", 1, 1))]);
+                                     Applic' (Var' (VarBound ("cdr", 4, 2)),
+                                      [Var' (VarBound ("args", 1, 1))])]),
+                                   ApplicTP' (Var' (VarBound ("cons", 4, 3)),
+                                    [Applic' (Var' (VarBound ("car", 4, 1)),
+                                      [Var' (VarParam ("ls", 0))]);
+                                     Applic' (BoxGet' (VarBound ("g", 0, 0)),
+                                      [Applic' (Var' (VarBound ("cdr", 4, 2)),
+                                        [Var' (VarParam ("ls", 0))])])]))));
+                                BoxGet' (VarParam ("g", 0))]]),
+                          [Const' (Sexpr (Symbol "whatever"))]),
+                        [Var' (VarParam ("ls", 0))]))));
+                    BoxGet' (VarParam ("f", 0))]]),
+              [Const' (Sexpr (Symbol "whatever"))]),
+            [Const' (Sexpr Nil); Var' (VarParam ("args", 0))]))),
+        [Var' (VarFree "null?"); Var' (VarFree "car"); Var' (VarFree "cdr");
+         Var' (VarFree "cons")])) *)
+
+let c55 = (run_semantics (tag_parse_expression (read_sexpr "
+         (define foo (lambda (n)
+         (if (= n 0)
+             'finish
+             (foo (- n 1))
+         )
+         )
+         )
+         ")));;
+
+let c56 = (run_semantics (tag_parse_expression (read_sexpr "
+         (define =
+  (let ((null? null?)(= =)(car car)(cdr cdr))
+    (letrec ((loop (lambda (element lst) (if 
+					  (null? lst) 
+					  #t 
+					  (if 
+					   (= element (car lst))
+					   (loop (car lst) (cdr lst))
+					   #f)
+					  ))))
+      (lambda lst
+	(cond ((null? lst) \"this should be an error, but you don't support exceptions\")
+        (else (loop (car lst) (cdr lst))))))))
+")));;
+
+let c57 = (run_semantics (tag_parse_expression (read_sexpr "
+  `(,@1)
+  ")));;
