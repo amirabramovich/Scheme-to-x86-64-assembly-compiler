@@ -28,11 +28,8 @@ module Code_Gen : CODE_GEN = struct
   let rec scan_ast asts consts = 
     match asts with
       | car :: cdr -> 
-         (match car with
+        (match car with (* Amir fix T_47 *)
               | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
-              | Var' (VarFree str) -> scan_ast cdr ([String str] @ consts)
-              | Var' (VarParam (str, pos)) -> scan_ast cdr ([String str] @ consts)
-              | Var' (VarBound (str, depth, pos)) -> scan_ast cdr ([String str] @ consts)
               | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
               | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test] @ [dit] @ [dif]) consts) 
               | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
@@ -253,14 +250,17 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ ".create_opt_list: \n" ^
         "\t" ^ "add r15, -1 ; Dec each Iter \n" ^
         "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
-        (* Move check to below *)
-        "\t" ^ "cmp r8, const_tbl+1 ; Param is Nil \n" ^
-        "\t" ^ "je .done_create_opt_list \n " ^ (* Added 2 lines, if param Nil => jmp, for return only Nil (Not Pair(Nil, Nil)) *)
+        (* Move check to below *)                               
+        "\t" ^ "cmp r8, const_tbl+1 ; Param is Nil \n" ^             (* Added 2 lines, if param Nil, jmp to .check_bounds *)
+        "\t" ^ "je .check_bounds  ; C (.done_create_opt_list) \n " ^ (* (and there, one more check, for "bounds") *)
         "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
         "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^
         "\t" ^ "jl .done_create_opt_list \n" ^ (* Revert to jl (jle) *)
         "\t" ^ "mov r9, rax ; Caten to next List \n " ^
-        "\t" ^ "jmp .create_opt_list \n" ^         
+        "\t" ^ "jmp .create_opt_list \n" ^ 
+        "\t" ^ ".check_bounds: ; A \n" ^ (* Add one more check, if got Nil, check if Idx is Bounded *)
+        "\t" ^ "cmp r15, r13 ; A \n" ^   (* (different (if diff, should be abobe => in bounds) r13 = # <StartOptListIdx>) *)
+        "\t" ^ "jne .create_opt_list ; A \n" ^
         "\t" ^ ".done_create_opt_list: \n" ^
         "\t" ^ "mov rax, r9 ; By default Nil \n" ^
         "\t" ^ "mov r10, rbp ; Put list in Opt loc \n" ^

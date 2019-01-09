@@ -1455,3 +1455,19 @@ let c53 =  (tag_parse_expression (read_sexpr "
                 Var "loop"]),
             [Const (Sexpr (Symbol "whatever"))])),
          [Var "null?"; Var "+"; Var "car"; Var "apply"; Var "cdr"])) *)
+
+
+let c54 = (run_semantics (tag_parse_expression (read_sexpr "
+(define append
+(let ((null? null?) (car car) (cdr cdr) (cons cons))
+  (lambda args
+    ((letrec ((f (lambda (ls args)
+                   (if (null? args)
+                       ls
+                       ((letrec ((g (lambda (ls)
+                                      (if (null? ls)
+                                          (f (car args) (cdr args))
+                                          (cons (car ls) (g (cdr ls)))))))
+                          g) ls)))))
+       f) '() args))))
+       ")));;

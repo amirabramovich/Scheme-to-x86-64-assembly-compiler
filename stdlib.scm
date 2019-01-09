@@ -24,14 +24,14 @@
 ;;       (or (null? x)
 ;; 	  (and (pair? x) (list? (cdr x)))))))
 
-(define length
-  (let ((null? null?) (pair? pair?) (cdr cdr) (+ +))
-    (lambda (x)
-      (letrec ((count 0) (loop (lambda (lst count)
-				 (cond ((null? lst) count)
-				       ((pair? lst) (loop (cdr lst) (+ 1 count)))
-				       (else "this should be an error, but you don't support exceptions")))))
-	(loop x 0)))))
+;; (define length
+;;   (let ((null? null?) (pair? pair?) (cdr cdr) (+ +))
+;;     (lambda (x)
+;;       (letrec ((count 0) (loop (lambda (lst count)
+;; 				 (cond ((null? lst) count)
+;; 				       ((pair? lst) (loop (cdr lst) (+ 1 count)))
+;; 				       (else "this should be an error, but you don't support exceptions")))))
+;; 	(loop x 0)))))
 
 
 ;;  (define make-string
@@ -109,7 +109,7 @@
 ;;     (lambda x (list->vector x))))
 
 
-;; not work 
+;; ;; not work 
 ;; (define +
 ;;   (let ((null? null?)(+ +)(car car)(apply apply)(cdr cdr))
 ;;     (letrec ((loop (lambda x (if (null? x) 0 (+ (car x) (apply loop (cdr x)))))))
@@ -120,36 +120,36 @@
 ;;     (letrec ((loop (lambda x (if (null? x) 1 (* (car x) (apply loop (cdr x)))))))
 ;;       loop)))
 
-(define -
-  (let ((null? null?)(- -)(+ +)(car car)(apply apply)(length length)(cdr cdr))
-    (letrec ((loop (lambda x (if (null? x) 0 (- (apply loop (cdr x)) (car x) )))))
-      (lambda num
-	(cond ((null? num) "this should be an error, but you don't support exceptions")
-	      ((= (length num) 1) (- 0 (car num)))
-	      (else (+ (car num) (apply loop (cdr num)))))))))
+;; (define -
+;;   (let ((null? null?)(- -)(+ +)(car car)(apply apply)(length length)(cdr cdr))
+;;     (letrec ((loop (lambda x (if (null? x) 0 (- (apply loop (cdr x)) (car x) )))))
+;;       (lambda num
+;; 	(cond ((null? num) "this should be an error, but you don't support exceptions")
+;; 	      ((= (length num) 1) (- 0 (car num)))
+;; 	      (else (+ (car num) (apply loop (cdr num)))))))))
 
-(define /
-  (let ((null? null?)(/ /)(* *)(car car)(apply apply)(length length)(cdr cdr))
-    (lambda num
-      (cond ((null? num) "this should be an error, but you don't support exceptions")
-	    ((= (length num) 1) (/ 1 (car num)))
-	    (else (/ (car num) (apply * (cdr num))))))))
+;; (define /
+;;   (let ((null? null?)(/ /)(* *)(car car)(apply apply)(length length)(cdr cdr))
+;;     (lambda num
+;;       (cond ((null? num) "this should be an error, but you don't support exceptions")
+;; 	    ((= (length num) 1) (/ 1 (car num)))
+;; 	    (else (/ (car num) (apply * (cdr num))))))))
 
 
-;; work
-(define =
-  (let ((null? null?)(= =)(car car)(cdr cdr))
-    (letrec ((loop (lambda (element lst) (if 
-					  (null? lst) 
-					  #t 
-					  (if 
-					   (= element (car lst))
-					   (loop (car lst) (cdr lst))
-					   #f)
-					  ))))
-      (lambda lst
-	(cond ((null? lst) "this should be an error, but you don't support exceptions")
-	      (else (loop (car lst) (cdr lst))))))))
+;; ;; work
+;; (define =
+;;   (let ((null? null?)(= =)(car car)(cdr cdr))
+;;     (letrec ((loop (lambda (element lst) (if 
+;; 					  (null? lst) 
+;; 					  #t 
+;; 					  (if 
+;; 					   (= element (car lst))
+;; 					   (loop (car lst) (cdr lst))
+;; 					   #f)
+;; 					  ))))
+;;       (lambda lst
+;; 	(cond ((null? lst) "this should be an error, but you don't support exceptions")
+;; 	      (else (loop (car lst) (cdr lst))))))))
 
 ;; (define <
 ;;   (let ((null? null?)(< <)(car car)(cdr cdr))

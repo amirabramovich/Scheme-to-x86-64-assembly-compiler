@@ -2397,8 +2397,28 @@ apply
 
 ***************
 
+lcode opt
 
+
+     (* "\t" ^ "je .create_opt_list \n" ^
+        "\t" ^ "add r15, 1 ; Add each Iter, till reach Idx Last Arg in Opt List \n" ^
+	      "\t" ^ "jmp .get_opt_args \n" ^
+        "\t" ^ ".create_opt_list: \n" ^
+        "\t" ^ "add r15, -1 ; Dec each Iter \n" ^
+        "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^ *)
+
+        (* Move check to below *)
+        (* "\t" ^ "cmp r8, const_tbl+1 ; Param is Nil \n" ^
+        "\t" ^ "je .done_create_opt_list \n " ^ *)
+        (* Added 2 lines, if param Nil => jmp, for return only Nil (Not Pair(Nil, Nil)), Revert *)
+
+        (* "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
+        "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^ *)
+
+*****
 ******
+
+
 Helper compile-
 
 ocaml compiler.ml compilerTest.scm > compilerTest.s
@@ -2408,6 +2428,7 @@ gcc -m64 -static -o compilerTest compilerTest.o
 ******
 
 nasm -felf64 -o foo.o foo.s
+gcc -m64 -static -o foo foo.o
 
 ***
 Helper debug-
