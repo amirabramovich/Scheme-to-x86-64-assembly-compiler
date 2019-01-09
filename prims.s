@@ -1,8 +1,8 @@
 
 apply:
-
     push rbp
     mov rbp, rsp
+    
     mov rcx, 2
 
 .get_list:

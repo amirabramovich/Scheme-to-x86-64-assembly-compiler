@@ -106,7 +106,7 @@ set_car:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(1) ; rsi contains new car
+    mov rsi, PVAR(1) ; rsi got new car
     mov r8, PVAR(0) ; qword of pair
     add r8, 1 ; r8 is car loc
     mov [r8], rsi
@@ -123,7 +123,7 @@ set_cdr:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(1) ; rsi contains new car
+    mov rsi, PVAR(1) ; rsi got new car
     mov r8, PVAR(0) ; qword of pair
     add r8, 9 ; r8 is cdr loc
     mov [r8], rsi

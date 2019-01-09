@@ -87,12 +87,14 @@
 	add rsp, 8
 %endmacro
 	
+
 ; Make a literal of type %1 
 ; followed by the definition %2
 %macro MAKE_LITERAL 2 
 	db %1
 	%2
 %endmacro
+
 
 %define MAKE_LITERAL_INT(val) MAKE_LITERAL T_INTEGER, dq val
 %define MAKE_LITERAL_FLOAT(val) MAKE_LITERAL T_FLOAT, dq val
@@ -138,6 +140,7 @@ dq %1
 	mov byte [%1+TYPE_SIZE], %2
 %endmacro
 
+
 ; Creates a long SOB with the
 ; value %2 and type %3.
 ; Returns the result in register %1
@@ -147,9 +150,11 @@ dq %1
 	mov qword [%1+TYPE_SIZE], %2
 %endmacro
 
+
 %define MAKE_INT(r,val) MAKE_LONG_VALUE r, val, T_INTEGER
 %define MAKE_FLOAT(r,val) MAKE_LONG_VALUE r, val, T_FLOAT
 %define MAKE_CHAR(r,val) MAKE_CHAR_VALUE r, val
+
 
 ; Create a string of length %2
 ; from char %3.
@@ -214,9 +219,9 @@ dq %1
 %endrep
 %endmacro
 
-;;; Creates a SOB with tag %2 
-;;; from two pointers %3 and %4
-;;; Stores result in register %1
+; Creates a SOB with tag %2 
+; from two pointers %3 and %4
+; Stores result in register %1
 %macro MAKE_TWO_WORDS 4 
         MALLOC %1, TYPE_SIZE+WORD_SIZE*2 ;it was WORD_BYTES in the source, not WORD_SIZE
         mov byte [%1], %2
