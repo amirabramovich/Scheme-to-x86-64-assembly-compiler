@@ -12,17 +12,20 @@
                               g) ls)))))
            f) '() args))))
 
+
 (define zero? 
   (let ((= =))
     (lambda (x) (= x 0))))
 
 (define list (lambda x x))
 
+
 (define list? 
   (let ((null? null?) (pair? pair?) (cdr cdr))
     (lambda (x)
       (or (null? x)
 	  (and (pair? x) (list? (cdr x)))))))
+
 
 (define length
   (let ((null? null?) (pair? pair?) (cdr cdr) (+ +))
@@ -42,14 +45,12 @@
  	    (else "this should be an error, but you don't support exceptions")))))
 
 
-
 (define make-vector
   (let ((length length)(make-vector make-vector)(car car)(null? null?))
     (lambda (x . y)
       (cond ((null? y) (make-vector x 0))
 	    ((= 1 (length y)) (make-vector x (car y)))
 	    (else "this should be an error, but you don't support exceptions")))))
-
 
 
 (define not
@@ -63,8 +64,7 @@
       (or (float? x) (integer? x)))))
 
 
-
- (define map
+(define map
    (let ((null? null?) (cons cons) (apply apply) (car car) (cdr cdr))
      (lambda (f ls . more)
        (if (null? more)
@@ -96,6 +96,7 @@
 			     (else "this should be an error, but you don't support exceptions")))))
 	(loop lst (make-vector (length lst)) 0)))))
 
+
 (define vector->list
   (let ((< <)(vector-ref vector-ref)(cons cons)(vector-length vector-length)(- -))
     (lambda (vec)
@@ -104,21 +105,23 @@
 			     (else (loop vec (cons (vector-ref vec count) lst) (- count 1)))))))
 	(loop vec '() (- (vector-length vec) 1))))))
 
+
 (define vector
   (let ((list->vector list->vector))
     (lambda x (list->vector x))))
 
 
-;; not work 
 (define +
   (let ((null? null?)(+ +)(car car)(apply apply)(cdr cdr))
     (letrec ((loop (lambda x (if (null? x) 0 (+ (car x) (apply loop (cdr x)))))))
       loop)))
 
+
 (define *
   (let ((null? null?)(* *)(car car)(apply apply)(cdr cdr))
     (letrec ((loop (lambda x (if (null? x) 1 (* (car x) (apply loop (cdr x)))))))
       loop)))
+
 
 (define -
   (let ((null? null?)(- -)(+ +)(car car)(apply apply)(length length)(cdr cdr))
@@ -128,6 +131,7 @@
 	      ((= (length num) 1) (- 0 (car num)))
 	      (else (+ (car num) (apply loop (cdr num)))))))))
 
+
 (define /
   (let ((null? null?)(/ /)(* *)(car car)(apply apply)(length length)(cdr cdr))
     (lambda num
@@ -136,7 +140,6 @@
 	    (else (/ (car num) (apply * (cdr num))))))))
 
 
-;; work
 (define =
   (let ((null? null?)(= =)(car car)(cdr cdr))
     (letrec ((loop (lambda (element lst) (if 
@@ -150,6 +153,7 @@
       (lambda lst
 	(cond ((null? lst) "this should be an error, but you don't support exceptions")
 	      (else (loop (car lst) (cdr lst))))))))
+
 
 (define <
   (let ((null? null?)(< <)(car car)(cdr cdr))
@@ -165,6 +169,7 @@
 	(cond ((null? lst) "this should be an error, but you don't support exceptions")
 	      (else (loop (car lst) (cdr lst))))))))
 
+
 (define >
   (let ((null? null?)(< <)(= =)(not not)(car car)(cdr cdr))
     (letrec ((loop (lambda (element lst) (if 
@@ -178,6 +183,7 @@
       (lambda lst
 	(cond ((null? lst) "this should be an error, but you don't support exceptions")
 	      (else (loop (car lst) (cdr lst))))))))
+
 
 (define equal?
   (let ((< <)(= =)(not not)(string-length string-length)(string-ref string-ref)(vector-ref vector-ref)(vector-length vector-length)(integer? integer?) (float? float?) (pair? pair?) (char? char?) (string? string?)(vector? vector?)(eq? eq?)(car car)(cdr cdr)(char->integer char->integer)(- -))

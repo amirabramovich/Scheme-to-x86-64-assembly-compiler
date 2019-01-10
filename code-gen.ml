@@ -5,14 +5,14 @@ module type CODE_GEN = sig
   val make_fvars_tbl : expr' list -> (string * int) list
   val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
 
-  (* TODO: delete later *)
-  (* val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
+  (* TODO: sig funcs used in Compiler.ml, Check if Can stay it for submit *)
+  val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
   val get_fvar_addr : 'a -> ('a * 'b) list -> 'b
   val primitive_names_to_labels : (string * string) list
   val scan_ast : expr' list -> sexpr list
   val remove_dups : 'a list -> 'a list
   val expand_lst : sexpr list -> sexpr list
-  val cons_tbl : sexpr list -> (constant * (int * string)) list *)
+  val cons_tbl : sexpr list -> (constant * (int * string)) list
 end;;
 
 module Code_Gen : CODE_GEN = struct
@@ -250,8 +250,8 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "jl .done_create_opt_list \n" ^
         "\t" ^ "mov r9, rax ; Caten to next List \n " ^
         "\t" ^ "jmp .create_opt_list \n" ^ 
-        (* ".check_bounds:  \n" ^      
-        "\t" ^ "cmp r15, r13 \n" ^ *)
+        (* ".check_bounds:  \n" ^ *)  
+        "\t" ^ "cmp r15, r13 \n" ^ (* TODO: check If Can Remove it *)
         "\t" ^ "jne .create_opt_list \n\n " ^
         ".done_create_opt_list: \n" ^
         "\t" ^ "mov rax, r9 ; By default Nil \n" ^
