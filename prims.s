@@ -3,58 +3,55 @@ apply:
     push rbp
     mov rbp, rsp
     
-    mov rcx, 2
+    mov rcx, 2 ; Magic Loc >= 2
 
 .get_list:
     mov r14, PVAR(rcx) 
     cmp r14, 6666
-    je .got_list
+    je .got_list ; If Magic, Got List
     inc rcx
     jmp .get_list 
 
-    dec rcx
-
 .got_list:
-    dec rcx 
+    dec rcx ; Last Elem Idx
     mov r14, PVAR(rcx) ; List
     mov r11, r14 ; Init
     mov rdx, 1 ; Init <lenList>
     push 6666 ; Magic
 
 .push_list:
-    cmp r11, const_tbl+1 
-    je .non_empty
-	CAR r10, r14
-    CDR r11, r14
-    push r10
-    mov r14, r11
-    inc rdx
+    cmp r11, const_tbl+1 ; Nil is Last Item
+    je .prep_swap ; Reach Last Item
+	CAR r10, r14 ; CurrCar
+    CDR r11, r14 ; CurrCdr
+    push r10 ; Push Car
+    mov r14, r11 ; currList
+    inc rdx ; <nOptListElems> ++
     jmp .push_list
 
-
-.non_empty:
-    mov r10, rsp
+.prep_swap:
+    mov r10, rsp ; Prepare to Reverse List
     mov r11, rbp
-    add r11, -16 ; prep swap
+    add r11, -16 ; By Swaps
 
 .reverse:
-    cmp r10, r11
+    cmp r10, r11 ; Check If Pass All Elems
     jg .finish
-    mov r12, qword[r10] ; swap
+    mov r12, qword[r10] ; Swap [r10], [r11]
     mov r13, qword[r11]
     mov qword[r10], r13
     mov qword[r11], r12
-    add r10, 8 ; inc 
-    add r11, -8 ; dec
+    add r10, 8 ; Inc To Next Loc
+    add r11, -8 ; Dec To Next Loc
     jmp .reverse
 
 .finish:
-    dec rcx
-    add rdx, rcx ; oldLen + listLen - 1
-    dec rdx
+    dec rcx ; <LastElemIdx> - 1 = <nArgs>
+    add rdx, rcx ; oldLen + listLen
+    dec rdx ; oldLen + listLen - 1
     
-    cmp rcx, 0
-    jle .prep_call ; no Args before List
+    cmp rcx, 0 ; <nArgs>
+    jle .prep_call ; Check If No Args Before List
 
 .push_args:
     mov rax, PVAR(rcx) 
@@ -66,17 +63,17 @@ apply:
 
 .prep_call:
     push rdx ; <newNumArgs>
-    mov rax, PVAR(0)
-    mov r9, [rax + TYPE_SIZE] ; env 
-    push r9 ; push
-    mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
-    push qword [rbp + 8] ; old ret addr
-    mov r15, qword[rbp] ; Save rbp
+    mov rax, PVAR(0) ; #<Procedure>
+    mov r9, [rax + TYPE_SIZE] ; Env 
+    push r9 
+    mov r10, [rax + TYPE_SIZE + WORD_SIZE] ; Code 
+    push qword [rbp + 8] ; Old Ret Addr
+    mov r15, qword [rbp] ; Save rbp
     add rdx, 5 ; <newLen> + 5
     
     ; Macro Shift_Frame
 	push rax
-	mov r9, PARAM_COUNT ; prevLen + 5
+	mov r9, PARAM_COUNT ; prevLen
 	mov rax, r9
 	add rax, 5
     mov r11, 1
@@ -84,25 +81,25 @@ apply:
 .shift: ; # <rdx> times
 	dec rax
     mov r12, r11 ; idxLoop
-    shl r12, 3 
+    shl r12, 3 ; idxLoop * 8
     mov r13, rbp
     sub r13, r12 ; rbp - 8 * idxLoop
-    mov r8, qword[r13]
+    mov r8, qword[r13] ; Shift
 	mov [rbp + WORD_SIZE * rax], r8
-    cmp r11, rdx
+    cmp r11, rdx ; Check If Idx Reach # <rdx>
     je .end_shift
     inc r11
     jmp .shift
 
 .end_shift:
 	pop rax
-	mov r8, r9
-	add r8, 5
-	shl r8, 3
+	mov r8, r9 ; PrevLen
+	add r8, 5 ; PrevLen + 5
+	shl r8, 3 ; (PrevLen + 5) * 8
 	add rsp, r8 ; End Macro
 
     mov rbp, r15 ; Restore rbp
-    jmp r10 ; code
+    jmp r10 ; Code
   
 .return:
     leave

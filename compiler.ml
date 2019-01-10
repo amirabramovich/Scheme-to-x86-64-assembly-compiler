@@ -51,7 +51,7 @@ main:
     mov rbp, rsp
 
     ;; set up the heap
-    mov rdi, GB(4)
+    mov rdi, MB(100) ; TODO: Change Back to GB(4) Before Submit
     call malloc
     mov [malloc_pointer], rax
 

@@ -230,7 +230,7 @@ module Code_Gen : CODE_GEN = struct
         "\n" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n\n" ^
-        "\n\t" ^ "; Closure Body \n" ^ 
+        "\t" ^ "; Closure Body \n" ^ 
         "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; Start From Last Param \n" ^
         "\t" ^ "mov r15, r13 ; Save last Param Idx \n" ^
 	      "\t" ^ "mov r9, const_tbl+1 ; Nil, for first pair \n\n" ^
@@ -247,9 +247,7 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^
         "\t" ^ "jl .done_create_opt_list \n" ^
         "\t" ^ "mov r9, rax ; Caten to next List \n " ^
-        "\t" ^ "jmp .create_opt_list \n" ^ 
-        "\t" ^ "cmp r15, r13 \n" ^ 
-        "\t" ^ "jne .create_opt_list \n\n " ^
+        "\t" ^ "jmp .create_opt_list \n\n" ^ 
         ".done_create_opt_list: \n" ^
         "\t" ^ "mov rax, r9 ; By default Nil \n" ^
         "\t" ^ "mov r10, rbp ; Put list in Opt loc \n" ^
