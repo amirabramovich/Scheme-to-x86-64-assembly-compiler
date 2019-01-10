@@ -1,1 +1,0 @@
-(list 'list)                                 ; (#<procedure at ...> . ())
