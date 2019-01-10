@@ -451,7 +451,6 @@ symbol_to_string:
     mov byte [r9], bl
     
     dec rcx
-    ; jmp .loop ; TODO: Check If Remove Comment
 .end:
 
     leave

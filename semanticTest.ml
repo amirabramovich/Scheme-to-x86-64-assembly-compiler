@@ -1560,7 +1560,18 @@ let c58 = (run_semantics (tag_parse_expression (read_sexpr "
 (loop 220000))
 ")));;
 
-
 let c59 = (run_semantics (tag_parse_expression (read_sexpr "
 `(* ,1)
+")));;
+
+let c60 = (run_semantics (tag_parse_expression (read_sexpr "
+(define x 1)
+")));;
+
+let c61 = (run_semantics (tag_parse_expression (read_sexpr "
+(set! x 2)
+")));;
+
+let c62 = (run_semantics (tag_parse_expression (read_sexpr "
+x
 ")));;

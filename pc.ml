@@ -29,12 +29,6 @@ let string_to_list str =
     else (String.get str i) :: (loop (i + 1) limit)
   in
   loop 0 (String.length str);;
-  
-(* Ofir change for let Test007_Mayer Works *)
-(* let string_to_list s =
-  let rec exp i l =
-    if i < 0 then l else exp (i - 1) (s.[i] :: l) in
-    exp (String.length s - 1) [] *)
 
 let list_to_string s =
   String.concat "" (List.map (fun ch -> String.make 1 ch) s);;

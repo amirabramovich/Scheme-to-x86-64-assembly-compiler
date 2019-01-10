@@ -307,7 +307,7 @@ write_sob_char:
 	mov rbp, rsp
 
 	CHAR_VAL rsi, rsi
-	and rsi, 255 ;TODO: check if remove
+	and rsi, 255
 
 	cmp rsi, CHAR_NUL
 	je .Lnul
@@ -716,10 +716,8 @@ write_sob_symbol:
 	mov bl, byte [rax]
 	and rbx, 0xff
 
-	cmp rcx, rdx
-	; jne .ch_simple ; D
-	cmp rbx, CHAR_SPACE ; C
-	jg .ch_simple ; C
+	cmp rbx, CHAR_SPACE
+	jg .ch_simple
 
 	cmp rbx, '+'
 	je .ch_hex
@@ -757,7 +755,7 @@ section .data
 .fs_simple_char:
 	db "%c", 0
 .fs_hex_char:
-	db "\x%02x ; ", 0
+	db "\x%02x;", 0	
 
 write_sob_closure:
 	push rbp

@@ -1,4 +1,4 @@
-  for f in self_tests/*.scm; do 
+  for f in OfirNadavTests/*.scm; do 
   ocaml compiler.ml $f > out.s
   nasm -f elf64 -o out.o out.s
   gcc -no-pie -m64 -o out out.o
