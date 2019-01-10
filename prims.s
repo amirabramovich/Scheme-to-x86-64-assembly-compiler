@@ -1,7 +1,6 @@
 
 apply:
     push rbp
-    ; mov rbx, qword[rbp] ; C
     mov rbp, rsp
     
     mov rcx, 2
@@ -24,7 +23,8 @@ apply:
 
 .push_list:
     cmp r11, const_tbl+1 
-    je .end_push_list
+    ; je .end_push_list
+    je .non_empty
 	CAR r10, r14
     CDR r11, r14
     push r10
@@ -32,11 +32,9 @@ apply:
     inc rdx
     jmp .push_list
 
-.end_push_list:
-    cmp rdx, 1
-    jne .non_empty
-    ; push r11 ; if empty
-    ; inc rdx 
+; .end_push_list:
+;     cmp rdx, 1
+;     jne .non_empty
 
 .non_empty:
     mov r10, rsp
@@ -77,7 +75,7 @@ apply:
     push r9 ; push
     mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
     push qword [rbp + 8] ; old ret addr
-    mov r15, qword[rbp] ; C
+    mov r15, qword[rbp] ; Save rbp
     add rdx, 5 ; <newLen> + 5
     
     ; Macro Shift_Frame
@@ -107,8 +105,7 @@ apply:
 	shl r8, 3
 	add rsp, r8 ; End Macro
 
-    mov rbp, r15 ; C (rbx)
-    ; mov rbp, rbx
+    mov rbp, r15 ; Restore rbp
     jmp r10 ; code
   
 .return:
@@ -458,7 +455,7 @@ symbol_to_string:
     mov byte [r9], bl
     
     dec rcx
-    ; jmp .loop ;; due to Yitav comment on facebook
+    ; jmp .loop ; TODO: Check If Remove Comment
 .end:
 
     leave

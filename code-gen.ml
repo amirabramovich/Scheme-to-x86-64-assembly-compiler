@@ -6,22 +6,21 @@ module type CODE_GEN = sig
   val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
 
   (* TODO: delete later *)
-  val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
+  (* val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
   val get_fvar_addr : 'a -> ('a * 'b) list -> 'b
   val primitive_names_to_labels : (string * string) list
   val scan_ast : expr' list -> sexpr list
   val remove_dups : 'a list -> 'a list
   val expand_lst : sexpr list -> sexpr list
-  val cons_tbl : sexpr list -> (constant * (int * string)) list
+  val cons_tbl : sexpr list -> (constant * (int * string)) list *)
 end;;
 
-
 module Code_Gen : CODE_GEN = struct
+
 
   let count = (ref 0);;
   let env_count = (ref 0);;
   let prev_params = (ref 0);;
-  (* let prev_args = (ref 0);; *)
 
 
   (* Helper function, scan AST & collect const sexprs, return sexprs list *)
@@ -29,14 +28,13 @@ module Code_Gen : CODE_GEN = struct
     match asts with
       | car :: cdr -> 
         (match car with (* Amir fix T_47 *)
-              | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
-              | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
-              | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test] @ [dit] @ [dif]) consts) 
-              | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
-              | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) | BoxSet' (_, body) -> 
-                  scan_ast cdr consts @ (scan_ast [body] consts)
-              | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
-              | _ -> scan_ast cdr consts)
+          | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
+          | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
+          | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test] @ [dit] @ [dif]) consts) 
+          | Seq' exprs | Or' exprs  -> scan_ast cdr consts @ (scan_ast exprs consts) 
+          | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) | BoxSet' (_, body) -> scan_ast cdr consts @ (scan_ast [body] consts)
+          | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_ast cdr consts @ (scan_ast ([op] @ exprs) consts) 
+          | _ -> scan_ast cdr consts)
       | _ -> consts ;;
 
   let scan_ast asts = scan_ast asts [] ;;
@@ -93,28 +91,28 @@ module Code_Gen : CODE_GEN = struct
   (* Helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
   let rec cons_tbl consts tbl addr =
     match consts with
-    | car :: cdr -> 
-      (match car with
-        | Bool _ | Nil -> cons_tbl cdr tbl addr
-        | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ string_of_int (Char.code ch) ^ ") ; my address is " ^ 
-            (string_of_int addr)))]) (addr + size_of car)
-        | String str -> cons_tbl cdr (tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str ^ " ; my address is " ^ 
-            (string_of_int addr)))]) (addr + size_of car)
-        | Number(Int num) ->
-            cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
+      | car :: cdr -> 
+        (match car with
+          | Bool _ | Nil -> cons_tbl cdr tbl addr
+          | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ string_of_int (Char.code ch) ^ ") ; my address is " ^ 
               (string_of_int addr)))]) (addr + size_of car)
-        | Number(Float num) -> 
-            cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ") ; my address is " ^ 
+          | String str -> cons_tbl cdr (tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str ^ " ; my address is " ^ 
               (string_of_int addr)))]) (addr + size_of car)
-        | Symbol sym -> 
-            cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl + " ^ 
-              string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car) 
-        | Pair (f, s) -> 
-            cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl + " ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ 
-              ", const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car)
-        | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec tbl ^ " ; my address is " ^ 
-            (string_of_int addr))]) (addr + size_of car))
-    | [] -> tbl ;;
+          | Number(Int num) ->
+              cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
+                (string_of_int addr)))]) (addr + size_of car)
+          | Number(Float num) -> 
+              cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ") ; my address is " ^ 
+                (string_of_int addr)))]) (addr + size_of car)
+          | Symbol sym -> 
+              cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl + " ^ 
+                string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car) 
+          | Pair (f, s) -> 
+              cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl + " ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ 
+                ", const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car)
+          | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec tbl ^ " ; my address is " ^ 
+              (string_of_int addr))]) (addr + size_of car))
+      | [] -> tbl ;;
     
   (* Cons_tbl main func *)
   let cons_tbl consts = cons_tbl consts [
@@ -136,12 +134,9 @@ module Code_Gen : CODE_GEN = struct
         (match car with
           | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
           | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars)
-          | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> 
-              scan_fvars cdr fvars @ (scan_fvars [body] fvars)
-          | Or' exprs | Seq' exprs -> 
-              scan_fvars cdr fvars @ List.concat ((List.map (fun expr -> scan_fvars [expr] fvars)) exprs)
-          | If' (test, dit, dif) -> 
-              scan_fvars cdr fvars @ scan_fvars [test; dit; dif] fvars
+          | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> scan_fvars cdr fvars @ (scan_fvars [body] fvars)
+          | Or' exprs | Seq' exprs -> scan_fvars cdr fvars @ List.concat ((List.map (fun expr -> scan_fvars [expr] fvars)) exprs)
+          | If' (test, dit, dif) -> scan_fvars cdr fvars @ scan_fvars [test; dit; dif] fvars
           | Set'(_ , expr) -> scan_fvars cdr fvars @ scan_fvars [expr] fvars
           | Applic' (op, exprs) | ApplicTP' (op, exprs) -> 
               scan_fvars cdr fvars @ List.concat (List.map (fun expr -> scan_fvars [expr] fvars) ([op] @ exprs))
@@ -159,8 +154,7 @@ module Code_Gen : CODE_GEN = struct
      "make-vector", "make_vector"; "symbol->string", "symbol_to_string"; 
      "char->integer", "char_to_integer"; "integer->char", "integer_to_char"; "eq?", "is_eq";
      "+", "bin_add"; "*", "bin_mul"; "-", "bin_sub"; "/", "bin_div"; "<", "bin_lt"; "=", "bin_equ";
-     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons";
-     "apply", "apply"
+     "car", "car"; "cdr", "cdr"; "set-car!", "set_car"; "set-cdr!", "set_cdr"; "cons", "cons"; "apply", "apply"
      ];;
      
   let first (x, y) = x;;
@@ -185,199 +179,204 @@ module Code_Gen : CODE_GEN = struct
       (* Helper function for Lcode of LambdaSimple *)
       let lcodeSimple vars body curr_count = 
         prev_params := Pervasives.max (!prev_params) (List.length vars);
-        "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
-        "\t" ^ "push rbp\n" ^
-        "\t" ^ "mov rbp , rsp ; parse of lambdaSimple body below: \n" ^
+        "\n" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
+        "\t" ^ "push rbp \n" ^
+        "\t" ^ "mov rbp, rsp ; parse lambdaSimple body below: \n" ^
         (generate consts fvars body) ^ 
         "\t" ^ "leave ; done parsing lambdaSimple body above \n" ^
-        "\t" ^ "ret\n" ^
-        "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
+        "\t" ^ "ret \n\n" ^
+        "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
       (* Helper function, for generate LambdaSimple *)
       let assemLambda vars body curr_count curr_env len =
-        "\t" ^ "lambdaSimple" ^ (string_of_int curr_count) ^ ":\n" ^ 
+        "lambdaSimple" ^ (string_of_int curr_count) ^ ":\n" ^ 
         "\t" ^ "MALLOC r10, 8 * (1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
-        "\t" ^ "mov r11, r10 ; copy of ExtEnv address\n" ^
+        "\t" ^ "mov r11, r10 ; copy of ExtEnv address \n" ^
         "\t" ^ "mov r12, 0 ; i \n" ^
         "\t" ^ "mov r13, 1 ; j \n" ^
-        "\t" ^ "mov r15, qword[rbp + 16] ; lexical env\n" ^
-        "\n\t" ^ ".copy_env:\n" ^
-        "\t\t" ^ "cmp r12, " ^ (string_of_int curr_env) ^ " ; |env| \n" ^
-        "\t\t" ^ "je .done_copy_env\n" ^
-        "\t\t" ^ "mov r14, qword[r15 + 8 * r12] ; r14 = Env[i] \n" ^
-        "\t\t" ^ "mov [r11 + 8 * r13], r14 ; ExtEnv[j] = r14 \n" ^
-        "\t\t" ^ "inc r12" ^ " ; inc counter of loop\n" ^ 
-        "\t\t" ^ "inc r13" ^ " ; inc counter of loop\n" ^ 
-        "\t\t" ^ "jmp .copy_env" ^ " ; back to loop\n" ^
-        "\n\t" ^ ".done_copy_env:\n" ^
-        "\t\t" ^ "mov r12, 0 ; i\n" ^
-        "\t\t" ^ "mov r15, rbp ; r15 = rbp\n" ^
-        "\t\t" ^ "add r15, 32 ; r15 = address of first arg\n" ^
-        "\t\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0]\n" ^
-        "\t\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n" ^
-        "\n\t" ^ ".copy_params:\n" ^
-        "\t\t" ^ "cmp r12, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
-        "\t\t" ^ "je .done_copy_params\n" ^
-        "\t\t" ^ "mov r9, [r15] ; r9 = Param(i)\n" ^
-        "\t\t" ^ "mov [r14], r9 ; ExtEnv [0][i] = r9\n" ^
-        "\t\t" ^ "add r14, 8\n" ^
-        "\t\t" ^ "add r15, 8\n" ^
-        "\t\t" ^ "inc r12\n" ^
-        "\t\t" ^ "jmp .copy_params\n" ^
-        "\n\t" ^ ".done_copy_params:\n" ^
-        "\t\t" ^ "mov [r10], r11\n" ^
-        "\t\t" ^ "MAKE_CLOSURE(rax, r10, Lcode" ^ (string_of_int curr_count) ^ ")\n" ^
-        "\t\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
+        "\t" ^ "mov r15, qword[rbp + 16] ; lexical env \n\n" ^
+        ".copy_env:\n" ^
+        "\t" ^ "cmp r12, " ^ (string_of_int curr_env) ^ " ; |env| \n" ^
+        "\t" ^ "je .done_copy_env\n" ^
+        "\t" ^ "mov r14, qword[r15 + 8 * r12] ; r14 = Env[i] \n" ^
+        "\t" ^ "mov [r11 + 8 * r13], r14 ; ExtEnv[j] = r14 \n" ^
+        "\t" ^ "inc r12" ^ " ; inc counter of loop \n" ^ 
+        "\t" ^ "inc r13" ^ " ; inc counter of loop \n" ^ 
+        "\t" ^ "jmp .copy_env" ^ " ; back to loop \n\n" ^
+        ".done_copy_env:\n" ^
+        "\t" ^ "mov r12, 0 ; i \n" ^
+        "\t" ^ "mov r15, rbp \n" ^
+        "\t" ^ "add r15, 32 ; r15 got Addrs of first arg \n" ^
+        "\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0] \n" ^
+        "\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n\n" ^
+        ".copy_params:\n" ^
+        "\t" ^ "cmp r12, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments \n" ^
+        "\t" ^ "je .done_copy_params \n" ^
+        "\t" ^ "mov r9, [r15] ; r9 = Param(i) \n" ^
+        "\t" ^ "mov [r14], r9 ; ExtEnv [0][i] = r9 \n" ^
+        "\t" ^ "add r14, 8 \n" ^
+        "\t" ^ "add r15, 8 \n" ^
+        "\t" ^ "inc r12 \n" ^
+        "\t" ^ "jmp .copy_params \n\n" ^
+        ".done_copy_params: \n" ^
+        "\t" ^ "mov [r10], r11\n" ^
+        "\t" ^ "MAKE_CLOSURE(rax, r10, Lcode" ^ (string_of_int curr_count) ^ ")\n" ^
+        "\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
 
       (* Helper function for Lcode of LambdaOpt *)
       let lcodeOpt vars opt body curr_count = 
         prev_params := Pervasives.max (!prev_params) ((List.length vars) + 1); 
         let len = List.length vars in
         (* Explain: to Get Rev Args, Start by Count |<OptList>|, and then, caten Pairs from <EndOptList> to <StartOptList> *)
-        "\n\t" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
+        "\n" ^ "Lcode" ^ (string_of_int curr_count) ^ ":\n" ^
         "\t" ^ "push rbp\n" ^
         "\t" ^ "mov rbp , rsp ; parse of lambdaOpt body below: \n\n" ^
-        "\t" ^ ";; Closure Body \n" ^ 
+        "\n\t" ^ "; Closure Body \n" ^ 
         "\t" ^ "mov r13, " ^ (string_of_int len) ^ " ; Start From Last Param \n" ^
         "\t" ^ "mov r15, r13 ; Save last Param Idx \n" ^
-	      "\t" ^ "mov r9, const_tbl+1 ; Nil, for first pair \n" ^
-        "\t" ^ ".get_opt_args: \n" ^
+	      "\t" ^ "mov r9, const_tbl+1 ; Nil, for first pair \n\n" ^
+        ".get_opt_args: \n" ^
  	      "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
         "\t" ^ "cmp r8, 6666 ; If Magic, is Last Param \n" ^
 	      "\t" ^ "je .create_opt_list \n" ^
         "\t" ^ "add r15, 1 ; Add each Iter, till reach Idx Last Arg in Opt List \n" ^
-	      "\t" ^ "jmp .get_opt_args \n" ^
-        "\t" ^ ".create_opt_list: \n" ^
+	      "\t" ^ "jmp .get_opt_args \n\n" ^
+        ".create_opt_list: \n" ^
         "\t" ^ "add r15, -1 ; Dec each Iter \n" ^
         "\t" ^ "mov r8, PVAR(r15) ; Index Of Curr Param  \n" ^
-        (* Move check to below *)                               
-        "\t" ^ "cmp r8, const_tbl+1 ; Param is Nil \n" ^             (* Added 2 lines, if param Nil, jmp to .check_bounds *)
-        "\t" ^ "; je .check_bounds   \n " ^ (* (and there, one more check, for "bounds") *)
+        "\t" ^ "cmp r8, const_tbl+1 ; Param is Nil \n" ^            
         "\t" ^ "MAKE_PAIR(rax, r8, r9) ; Make List \n" ^
         "\t" ^ "cmp r15, r13 ; Go BackWard, till Last Param of Regular Params \n" ^
-        "\t" ^ "jl .done_create_opt_list \n" ^ (* Revert to jl (jle) *)
+        "\t" ^ "jl .done_create_opt_list \n" ^
         "\t" ^ "mov r9, rax ; Caten to next List \n " ^
         "\t" ^ "jmp .create_opt_list \n" ^ 
-        "\t" ^ ".check_bounds:  \n" ^ (* Add one more check, if got Nil, check if Idx is Bounded *)
-        "\t" ^ "cmp r15, r13 \n" ^   (* (different (if diff, should be abobe => in bounds) r13 = # <StartOptListIdx>) *)
-        "\t" ^ "jne .create_opt_list \n" ^
-        "\t" ^ ".done_create_opt_list: \n" ^
+        (* ".check_bounds:  \n" ^      
+        "\t" ^ "cmp r15, r13 \n" ^ *)
+        "\t" ^ "jne .create_opt_list \n\n " ^
+        ".done_create_opt_list: \n" ^
         "\t" ^ "mov rax, r9 ; By default Nil \n" ^
         "\t" ^ "mov r10, rbp ; Put list in Opt loc \n" ^
         "\t" ^ "shl r13, 3 ; <nParams> * 8 \n" ^
         "\t" ^ "add r10, r13 ; rbp + <sizeParams> \n" ^
         "\t" ^ "add r10, 8 * 4  \n" ^
-        "\t" ^ "mov [r10], rax ; Put list \n" ^
-        "\t" ^ ";; Original Closure Body \n" ^
+        "\t" ^ "mov [r10], rax ; Put list \n\n" ^
+        "\t" ^ "; Original Closure Body \n" ^
         (generate consts fvars body) ^ 
         "\t" ^ "leave ; done parsing lambdaOpt body above \n\n" ^
-        "\t" ^ "ret\n" ^
-        "\n\t" ^ "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
+        "\t" ^ "ret \n\n" ^
+        "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
       (* Helper function, for generate LambdaOpt *)
       let assemOpt vars opt body curr_count curr_env len = 
-        "\t" ^ "lambdaOpt" ^ (string_of_int curr_count) ^ ":\n" ^ 
-        "\t" ^ "mov rsi, " ^ (string_of_int (List.length vars)) ^ " ; store num of params in rsi \n" ^ (* sotre num of params in rsi *)
+        "\nlambdaOpt" ^ (string_of_int curr_count) ^ ":\n" ^ 
+        "\t" ^ "mov rsi, " ^ (string_of_int (List.length vars)) ^ " ; Store <nParams> in rsi \n" ^
         "\t" ^ "MALLOC r10, 8 * (1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
-        "\t" ^ "mov r11, r10 ; copy of ExtEnv address\n" ^
+        "\t" ^ "mov r11, r10 ; copy of ExtEnv address \n" ^
         "\t" ^ "mov r12, 0 ; i\n" ^
         "\t" ^ "mov r13, 1 ; j\n" ^
-        "\t" ^ "mov r15, qword[rbp + 16] ; lexical env\n" ^
-        "\n\t" ^ ".copy_env:\n" ^
-        "\t\t" ^ "cmp r12, " ^ (string_of_int curr_env) ^ " ; |env|\n" ^
-        "\t\t" ^ "je .done_copy_env\n" ^
-        "\t\t" ^ "mov r14, qword[r15 + 8 * r12] ; r14 = Env[i]\n" ^
-        "\t\t" ^ "mov [r11 + 8 * r13], r14 ; ExtEnv[j] = r14\n" ^
-        "\t\t" ^ "inc r12" ^ " ; inc counter of loop\n" ^ 
-        "\t\t" ^ "inc r13" ^ " ; inc counter of loop\n" ^ 
-        "\t\t" ^ "jmp .copy_env" ^ " ; back to loop\n" ^
-        "\n\t" ^ ".done_copy_env:\n" ^
-        "\t\t" ^ "mov r12, 0 ; i\n" ^
-        "\t\t" ^ "mov r15, rbp ; r15 = rbp\n" ^
-        "\t\t" ^ "add r15, 32 ; r15 = address of first arg\n" ^
-        "\t\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0]\n" ^ 
-        "\t\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n" ^
-        "\n\t" ^ ".copy_params:\n" ^
-        "\t\t" ^ "cmp r12, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
-        "\t\t" ^ "je .done_copy_params\n" ^
-        "\t\t" ^ "mov r9, [r15] ; r9 = Param(i)\n" ^
-        "\t\t" ^ "mov [r14], r9 ; ExtEnv [0][i] = r9\n" ^
-        "\t\t" ^ "add r14, 8\n" ^
-        "\t\t" ^ "add r15, 8\n" ^
-        "\t\t" ^ "inc r12\n" ^
-        "\t\t" ^ "jmp .copy_params\n" ^
-        "\n\t" ^ ".done_copy_params:\n" ^
-        "\t\t" ^ "mov [r10], r11\n" ^
-        "\t\t" ^ "MAKE_CLOSURE(rax, r10, Lcode" ^ (string_of_int curr_count) ^ ")\n" ^
-        "\t\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
+        "\t" ^ "mov r15, qword[rbp + 16] ; lexical env \n\n" ^
+        ".copy_env:\n" ^
+        "\t" ^ "cmp r12, " ^ (string_of_int curr_env) ^ " ; |env|\n" ^
+        "\t" ^ "je .done_copy_env\n" ^
+        "\t" ^ "mov r14, qword[r15 + 8 * r12] ; r14 = Env[i]\n" ^
+        "\t" ^ "mov [r11 + 8 * r13], r14 ; ExtEnv[j] = r14\n" ^
+        "\t" ^ "inc r12" ^ " ; inc counter of loop \n" ^ 
+        "\t" ^ "inc r13" ^ " ; inc counter of loop \n" ^ 
+        "\t" ^ "jmp .copy_env" ^ " ; back to loop \n\n" ^
+        ".done_copy_env:\n" ^
+        "\t" ^ "mov r12, 0 ; i\n" ^
+        "\t" ^ "mov r15, rbp ; r15 = rbp\n" ^
+        "\t" ^ "add r15, 32 ; r15 = address of first arg\n" ^
+        "\t" ^ "MALLOC r14, 8*" ^ (string_of_int len) ^ " ; allocate ExtEnv[0]\n" ^ 
+        "\t" ^ "mov r11, r14 ; copy of ExtEnv[0] \n\n" ^
+        ".copy_params:\n" ^
+        "\t" ^ "cmp r12, " ^ (string_of_int len) ^ " ; " ^ (string_of_int len) ^ " arguments\n" ^
+        "\t" ^ "je .done_copy_params\n" ^
+        "\t" ^ "mov r9, [r15] ; r9 = Param(i)\n" ^
+        "\t" ^ "mov [r14], r9 ; ExtEnv [0][i] = r9\n" ^
+        "\t" ^ "add r14, 8\n" ^
+        "\t" ^ "add r15, 8\n" ^
+        "\t" ^ "inc r12\n" ^
+        "\t" ^ "jmp .copy_params \n\n" ^
+        ".done_copy_params:\n" ^
+        "\t" ^ "mov [r10], r11\n" ^
+        "\t" ^ "MAKE_CLOSURE(rax, r10, Lcode" ^ (string_of_int curr_count) ^ ")\n" ^
+        "\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
 
     match e with
       | Const' (expr) -> "\t" ^ "mov rax, const_tbl+" ^ (string_of_int (get_const_addr expr consts)) ^ " ; Const \n"
-      | Var'(VarFree v) -> "\t" ^ "mov rax, qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE]" ^
-                                                                                                        " ; VarFree \n"
+      | Var'(VarFree v) -> "\t" ^ "mov rax, qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE]" ^ " ; VarFree \n"
       | Var'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; VarParam \n"
       | Var'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; VarBound \n" ^
-                                        "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")" ^ " \n" ^
-                                        "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")" ^ "  \n" 
-      | Def'(Var'(VarFree(name)), expr) -> (generate consts fvars expr) ^ 
-                                          "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr name fvars)) ^ "*WORD_SIZE], rax" ^  
-                                          "; define " ^ "\n" ^
-                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n" 
-      | Set'(Var'(VarFree(v)), expr) -> (generate consts fvars expr) ^ 
-                                          "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE], rax" ^ 
-                                          " ; VarFree, Set \n" ^
-                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
-      | Set'(Var'(VarParam(_, pos)), expr) -> (generate consts fvars expr) ^ 
-                                              "\t" ^ "mov qword PVAR(" ^ (string_of_int pos) ^ "), rax" ^ " ; VarParam, Set \n" ^
-                                              "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
-      | Set'(Var'(VarBound(_, depth, pos)), expr) -> (generate consts fvars expr) ^
-                                                  "\t" ^ "mov rbx, qword [rbp + 16]" ^ " ; VarBound, Set \n" ^
-                                                  "\t" ^ "mov rbx, BVARX(" ^ (string_of_int depth)^ ")" ^ 
-                                                  " ; mov rbx, qword [rbx+WORD_SIZE*depth] \n" ^
-                                                  "\t" ^ "mov BVARX(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
-                                                  "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+                                         "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")" ^ " \n" ^
+                                         "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")" ^ "  \n" 
+      | Def'(Var'(VarFree(name)), expr) ->
+          (generate consts fvars expr) ^ 
+          "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr name fvars)) ^ "*WORD_SIZE], rax" ^ " ; define " ^ "\n" ^
+          "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n" 
+      | Set'(Var'(VarFree(v)), expr) -> (
+            generate consts fvars expr) ^ 
+            "\t" ^ "mov qword [fvar_tbl+" ^ (string_of_int (get_fvar_addr v fvars)) ^ "*WORD_SIZE], rax" ^ " ; VarFree, Set \n" ^
+            "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+      | Set'(Var'(VarParam(_, pos)), expr) -> 
+          (generate consts fvars expr) ^ 
+          "\t" ^ "mov qword PVAR(" ^ (string_of_int pos) ^ "), rax" ^ " ; VarParam, Set \n" ^
+          "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
+      | Set'(Var'(VarBound(_, depth, pos)), expr) -> (
+          generate consts fvars expr) ^
+          "\t" ^ "mov rbx, qword [rbp + 16]" ^ " ; VarBound, Set \n" ^
+          "\t" ^ "mov rbx, BVARX(" ^ (string_of_int depth)^ ")" ^ " ; mov rbx, qword [rbx+WORD_SIZE*depth] \n" ^
+          "\t" ^ "mov BVARX(" ^ (string_of_int pos) ^ "), rax" ^ "\n" ^
+          "\t" ^ "mov rax, SOB_VOID_ADDRESS" ^ "\n"
       | Seq'(exprs) -> String.concat "\n" (List.map (generate consts fvars) exprs) (* generate "Epsilons" (=exprs), separated by "newline" *)
-      | Or'(exprs) -> let current = !count in
-                      count := !count + 1;
-                      (* Helper function to generate Or' *)
-                      let or_gen consts fvars expr =
-                        (generate consts fvars expr) ^ 
-                        "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
-                        "\t" ^ "jne LexitOr" ^ (string_of_int current) ^ "\n" in
-                      String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
-                      "\t" ^ "LexitOr" ^ (string_of_int current) ^ ":\n"
-      | If'(test, dit, dif) -> let current = !count in
-                              count := !count + 1;
-                              (generate consts fvars test) ^ 
-                              "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
-                              "\t" ^ "je Lelse" ^ (string_of_int current) ^ "\n" ^ 
-                              (generate consts fvars dit) ^ 
-                              "\t" ^ "jmp LexitIf" ^ (string_of_int current) ^ "\n" ^
-                              "\t" ^ "Lelse" ^ (string_of_int current) ^ ":\n" ^
-                              (generate consts fvars dif) ^ 
-                              "\t" ^ "LexitIf" ^ (string_of_int current) ^ ":\n"
-      | BoxGet'(VarParam(_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; BoxGet, VarParam \n" ^ 
-                                     "\t" ^ "mov rax, qword [rax]" ^ "\n"
-      | BoxGet'(VarBound(_, depth, pos)) -> "\t" ^ "mov rax, qword [rbp + 16]" ^ " ;  BoxGet, VarBound \n" ^
-                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
-                                            "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
-                                            "\t" ^ "mov rax, qword [rax]" ^ "\n"
-      | BoxSet'(VarParam(_, pos), expr) -> (generate consts fvars expr) ^
-                                          "\t" ^ "push rax ; BoxSet, VarParam \n" ^
-                                          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")\n" ^ 
-                                          "\t" ^ "pop qword [rax]\n" ^
-                                          "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
-      | BoxSet'(VarBound(_, depth, pos), expr) -> (generate consts fvars expr) ^ 
-                                                  "\t" ^ "push rax ; BoxSet, VarBound \n" ^
-                                                  "\t" ^ "mov rax, qword [rbp +16]\n" ^
-                                                  "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
-                                                  "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
-                                                  "\t" ^ "pop qword [rax]\n" ^
-                                                  "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
-      | Box'(VarParam (_, pos)) -> "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ") ; Box, VarParam \n" ^
-                                    "\t" ^ "MALLOC rbx, 8 \n" ^
-                                    "\t" ^ "mov [rbx], rax \n" ^
-                                    "\t" ^ "mov rax, rbx \n"
+      | Or'(exprs) -> 
+          let current = !count in
+          count := !count + 1;
+          (* Helper function to generate Or' *)
+          let or_gen consts fvars expr =
+            (generate consts fvars expr) ^ 
+            "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
+            "\t" ^ "jne LexitOr" ^ (string_of_int current) ^ "\n" in
+          String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
+          "\t" ^ "LexitOr" ^ (string_of_int current) ^ ":\n"
+      | If'(test, dit, dif) -> 
+          let current = !count in
+          count := !count + 1;
+          (generate consts fvars test) ^ 
+          "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
+          "\t" ^ "je Lelse" ^ (string_of_int current) ^ "\n" ^ 
+          (generate consts fvars dit) ^ 
+          "\t" ^ "jmp LexitIf" ^ (string_of_int current) ^ "\n\n" ^
+          "Lelse" ^ (string_of_int current) ^ ":\n" ^
+          (generate consts fvars dif) ^ "\n" ^ 
+          "LexitIf" ^ (string_of_int current) ^ ":\n"
+      | BoxGet'(VarParam(_, pos)) -> 
+          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")" ^ " ; BoxGet, VarParam \n" ^ 
+          "\t" ^ "mov rax, qword [rax]" ^ "\n"
+      | BoxGet'(VarBound(_, depth, pos)) -> 
+          "\t" ^ "mov rax, qword [rbp + 16]" ^ " ; BoxGet, VarBound \n" ^
+          "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+          "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
+          "\t" ^ "mov rax, qword [rax]" ^ "\n"
+      | BoxSet'(VarParam(_, pos), expr) -> 
+          (generate consts fvars expr) ^
+          "\t" ^ "push rax ; BoxSet, VarParam \n" ^
+          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ")\n" ^ 
+          "\t" ^ "pop qword [rax]\n" ^
+          "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
+      | BoxSet'(VarBound(_, depth, pos), expr) -> 
+          (generate consts fvars expr) ^ 
+          "\t" ^ "push rax ; BoxSet, VarBound \n" ^
+          "\t" ^ "mov rax, qword [rbp +16]\n" ^
+          "\t" ^ "mov rax, BVAR(" ^ (string_of_int depth) ^ ")\n" ^
+          "\t" ^ "mov rax, BVAR(" ^ (string_of_int pos) ^ ")\n" ^
+          "\t" ^ "pop qword [rax]\n" ^
+          "\t" ^ "mov rax, SOB_VOID_ADDRESS\n"
+      | Box'(VarParam (_, pos)) -> 
+          "\t" ^ "mov rax, PVAR(" ^ (string_of_int pos) ^ ") ; Box, VarParam \n" ^
+          "\t" ^ "MALLOC rbx, 8 \n" ^
+          "\t" ^ "mov [rbx], rax \n" ^
+          "\t" ^ "mov rax, rbx \n"
       | LambdaSimple'(vars, body) -> 
           let (curr_count, curr_env) = (!count, !env_count) in
           count := !count + 1;
@@ -395,27 +394,27 @@ module Code_Gen : CODE_GEN = struct
       | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
           let args = List.rev args in 
           let len = List.length args in
-          (* TODO: check if use nArgs at Lambdas / Applic's, if sure that not => remove it *)
-          (* let rcxLen = if (!prev_args > len) then (!prev_args) else len in *)
-          (* prev_args := len; *)
           count := !count + 1;
+          (* Helper function, for generate applic *)
           let rec applic_rec args =
             match args with
-            | car :: cdr -> 
-              (generate consts fvars car) ^
-              "\t" ^ "push rax\n" ^ 
-              applic_rec cdr
-            | [] -> 
-              "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; number of arguments \n" ^ (* Changed to len (from rcxLen) *)
-              "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below: \n" ^
-              (generate consts fvars op) ^
-              "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; closure's env \n" ^
-              "\t" ^ "push rbx ; push env \n" ^
-              "\t" ^ "mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; clousre's code \n" ^
-              "\t" ^ "call rbx ; call code\n\tadd rsp, 8*1 ; pop env\n\tpop rbx ; pop arg count \n" ^
-              "\t" ^ "inc rbx\n" ^
-              "\t" ^ "shl rbx, 3 ; rbx = rbx * 8\n" ^
-              "\t" ^ "add rsp, rbx ; pop args \n"
+              | car :: cdr -> 
+                (generate consts fvars car) ^
+                "\t" ^ "push rax \n" ^ 
+                applic_rec cdr
+              | [] -> 
+                "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; <nArgs> \n" ^ 
+                "\t" ^ "push " ^ (string_of_int len) ^ " ; parse <op> below: \n" ^
+                (generate consts fvars op) ^
+                "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; env \n" ^
+                "\t" ^ "push rbx ; push env \n" ^
+                "\t" ^ "mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; code \n" ^
+                "\t" ^ "call rbx ; call code\n " ^ 
+                "\t" ^ "add rsp, 8*1 ; pop env \n" ^ 
+                "\t" ^ "pop rbx ; pop arg count \n" ^
+                "\t" ^ "inc rbx \n" ^
+                "\t" ^ "shl rbx, 3 ; rbx = rbx * 8 \n" ^
+                "\t" ^ "add rsp, rbx ; pop args \n\n"
           in 
           (* Explain use: push 6666 Magic at end, sign for EndArgs of LambdaOpt *)
           "\n\t" ^ "mov rax, 6666 ; applic \n" ^
@@ -426,6 +425,7 @@ module Code_Gen : CODE_GEN = struct
           let args = List.rev args in 
           let len = List.length args in
           (* prev_args := len; *)
+          (* Helper function, for generate applic in tail position *)
           let rec applicTP_rec args =
             match args with
               | car :: cdr -> 
@@ -443,7 +443,7 @@ module Code_Gen : CODE_GEN = struct
                 "\t" ^ "mov r15, qword[rbp] \n" ^
                 "\t" ^ "SHIFT_FRAME " ^ (string_of_int (len + 5)) ^ "\n" ^
                 "\t" ^ "mov rbp, r15 \n" ^
-                "\t" ^ "jmp r10 ; code \n"
+                "\t" ^ "jmp r10 ; code \n\n"
           in 
           (* Explain use: push 6666 Magic at end, sign for EndArgs of LambdaOpt *)
           "\t" ^ "mov rax, 6666 ; applic tail position \n" ^

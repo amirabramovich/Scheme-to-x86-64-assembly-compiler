@@ -1549,3 +1549,11 @@ let c56 = (run_semantics (tag_parse_expression (read_sexpr "
 let c57 = (run_semantics (tag_parse_expression (read_sexpr "
   `(,@1)
   ")));;
+
+let c58 = (run_semantics (tag_parse_expression (read_sexpr "
+  (letrec ((loop (lambda (r)
+    (if (= r 0)
+        0
+        (loop (- r 1))))))
+(loop 220000))
+")));;

@@ -754,7 +754,7 @@ section .data
 .fs_simple_char:
 	db "%c", 0
 .fs_hex_char:
-	db "\x%02x;", 0	
+	db "\x%02x ; ", 0
 
 write_sob_closure:
 	push rbp
