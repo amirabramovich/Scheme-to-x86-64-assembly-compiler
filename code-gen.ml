@@ -21,7 +21,12 @@ module Code_Gen : CODE_GEN = struct
   let count = (ref 0);;
   let env_count = (ref 0);;
   let prev_params = (ref 0);;
-
+  let glob_tbl = (ref [
+    (Void, (0, "MAKE_VOID ; my address is 0"));
+    (Sexpr(Nil), (1, "MAKE_NIL ; my address is 1"));
+    (Sexpr(Bool false), (2, "MAKE_BOOL(0) ; my address is 2"));
+    (Sexpr(Bool true), (4, "MAKE_BOOL(1) ; my address is 4"));
+    ]);;
 
   (* Helper function, scan AST & collect const sexprs, return sexprs list *)
   let rec scan_ast asts consts = 
@@ -89,41 +94,52 @@ module Code_Gen : CODE_GEN = struct
     String.concat ", " lst_string;; 
 
   (* Helper func, got consts, tbl and addr, return tbl (at the end of recursion) *)
-  let rec cons_tbl consts tbl addr =
-    match consts with
+  let rec cons_tbl consts addr =
+    match !consts with
       | car :: cdr -> 
         (match car with
-          | Bool _ | Nil -> cons_tbl cdr tbl addr
-          | Char ch -> cons_tbl cdr (tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ string_of_int (Char.code ch) ^ ") ; my address is " ^ 
-              (string_of_int addr)))]) (addr + size_of car)
-          | String str -> cons_tbl cdr (tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str ^ " ; my address is " ^ 
-              (string_of_int addr)))]) (addr + size_of car)
+          | Bool _ | Nil -> cons_tbl (ref cdr) addr (* Next Call *)
+          | Char ch -> 
+              glob_tbl := (!glob_tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ string_of_int (Char.code ch) ^ ") ; my address is " ^ 
+                  (string_of_int addr)))]); (* Update Glob Table *)
+                      cons_tbl (ref cdr) (addr + size_of car) (* Next Call *)
+          | String str -> 
+              glob_tbl := (!glob_tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str ^ " ; my address is " ^ 
+                  (string_of_int addr)))]);   (* Up Tbl *)
+                      cons_tbl (ref cdr) (addr + size_of car) (* NxtCall *)
           | Number(Int num) ->
-              cons_tbl cdr (tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
-                (string_of_int addr)))]) (addr + size_of car)
+              glob_tbl := (!glob_tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
+                  (string_of_int addr)))]);
+                      cons_tbl (ref cdr) (addr + size_of car)
           | Number(Float num) -> 
-              cons_tbl cdr (tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ") ; my address is " ^ 
-                (string_of_int addr)))]) (addr + size_of car)
+              glob_tbl := (!glob_tbl @ [(Sexpr(Number(Float num)), (addr, "MAKE_LITERAL_FLOAT(" ^ (string_of_float num) ^ ") ; my address is " ^ 
+                  (string_of_int addr)))]);
+                      cons_tbl (ref cdr) (addr + size_of car)
           | Symbol sym -> 
-              cons_tbl cdr (tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl + " ^ 
-                string_of_int (get_const_addr (Sexpr(String sym)) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car) 
+              glob_tbl := (!glob_tbl @ [(Sexpr(Symbol sym), (addr, "MAKE_LITERAL_SYMBOL(const_tbl + " ^ 
+                  string_of_int (get_const_addr (Sexpr(String sym)) !glob_tbl) ^ ") ; my address is " ^ (string_of_int addr)))]);
+                      cons_tbl (ref cdr) (addr + size_of car)
           | Pair (f, s) -> 
-              cons_tbl cdr (tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl + " ^ string_of_int (get_const_addr (Sexpr f) tbl) ^ 
-                ", const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) tbl) ^ ") ; my address is " ^ (string_of_int addr)))]) (addr + size_of car)
-          | Vector vec -> cons_tbl cdr (tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec tbl ^ " ; my address is " ^ 
-              (string_of_int addr))]) (addr + size_of car))
-      | [] -> tbl ;;
+              glob_tbl := (!glob_tbl @ [(Sexpr(Pair (f, s)), (addr, "MAKE_LITERAL_PAIR(const_tbl + " ^
+                  string_of_int (get_const_addr (Sexpr f) !glob_tbl) ^ 
+                      ", const_tbl + " ^ string_of_int (get_const_addr (Sexpr s) !glob_tbl) ^ ") ; my address is " ^ (string_of_int addr)))]);
+              cons_tbl (ref cdr) (addr + size_of car)
+          | Vector vec -> 
+              glob_tbl := (!glob_tbl @ [(Sexpr(Vector vec)), (addr, "MAKE_LITERAL_VECTOR " ^ vec_const vec !glob_tbl ^ " ; my address is " ^ 
+                  (string_of_int addr))]);
+                      cons_tbl (ref cdr) (addr + size_of car))
+      | [] -> !glob_tbl;;
     
   (* Cons_tbl main func *)
-  let cons_tbl consts = cons_tbl consts [
-    (Void, (0, "MAKE_VOID ; my address is 0"));
-    (Sexpr(Nil), (1, "MAKE_NIL ; my address is 1"));
-    (Sexpr(Bool false), (2, "MAKE_BOOL(0) ; my address is 2"));
-    (Sexpr(Bool true), (4, "MAKE_BOOL(1) ; my address is 4"));
-    ] 6;;
+  let cons_tbl consts = cons_tbl (ref consts) 6;;
   
   (* Signature func, expr' list -> (constant * (int * string)) list *)
-  let make_consts_tbl asts = cons_tbl (remove_dups (expand_lst (remove_dups (scan_ast asts))));;
+  let make_consts_tbl asts =
+    let consts = scan_ast asts in
+    let constsUnique = remove_dups consts in
+    let expandedConsts = expand_lst constsUnique in
+    let expandedUnique = remove_dups expandedConsts in
+    cons_tbl expandedUnique;;
 
 
   (* fvar table *)
@@ -131,7 +147,7 @@ module Code_Gen : CODE_GEN = struct
     match asts with
       | car :: cdr -> 
         (match car with
-          | Var'(VarFree expr) -> scan_fvars cdr [expr] @ fvars
+          | Var'(VarFree expr) | BoxSet'(_, Var'(VarFree expr)) -> scan_fvars cdr [expr] @ fvars
           | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars)
           | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> scan_fvars cdr fvars @ (scan_fvars [body] fvars)
           | Or' exprs | Seq' exprs -> scan_fvars cdr fvars @ List.concat ((List.map (fun expr -> scan_fvars [expr] fvars)) exprs)
@@ -165,7 +181,9 @@ module Code_Gen : CODE_GEN = struct
       | car :: cdr -> cons_fvars cdr (tbl @ [(car, addr)]) (addr + 1) 
       | [] -> tbl ;;
     
-  let cons_fvars fvars = cons_fvars (remove_dups (saved_fvars @ fvars)) [] 0;;
+  let cons_fvars fvars = 
+      let fvarsUnique = remove_dups (saved_fvars @ fvars) in
+      cons_fvars fvarsUnique [] 0;;
 
   (* Signature func, expr' list -> (string * int) list *)
   let make_fvars_tbl asts = cons_fvars (scan_fvars asts);;
