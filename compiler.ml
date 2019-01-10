@@ -51,7 +51,7 @@ main:
     mov rbp, rsp
 
     ;; set up the heap
-    mov rdi, MB(100) ; TODO: Before sub, Change Back to 4GB
+    mov rdi, GB(4)
     call malloc
     mov [malloc_pointer], rax
 
@@ -78,6 +78,131 @@ code_fragment:
 ";;
 
 let epilogue = " 
+
+apply:
+    push rbp
+    mov rbp, rsp
+    
+    mov rcx, 2
+
+.get_list:
+    mov r14, PVAR(rcx) 
+    cmp r14, 6666
+    je .got_list
+    inc rcx
+    jmp .get_list 
+
+    dec rcx
+
+.got_list:
+    dec rcx 
+    mov r14, PVAR(rcx) ; List
+    mov r11, r14 ; Init
+    mov rdx, 1 ; Init <lenList>
+    push 6666 ; Magic
+
+.push_list:
+    cmp r11, const_tbl+1 
+    je .non_empty
+	CAR r10, r14
+    CDR r11, r14
+    push r10
+    mov r14, r11
+    inc rdx
+    jmp .push_list
+
+.non_empty:
+    mov r10, rsp
+    mov r11, rbp
+    add r11, -16 ; prep swap
+
+.reverse:
+    cmp r10, r11
+    jg .finish
+    mov r12, qword[r10] ; swap
+    mov r13, qword[r11]
+    mov qword[r10], r13
+    mov qword[r11], r12
+    add r10, 8 ; inc 
+    add r11, -8 ; dec
+    jmp .reverse
+
+.finish:
+    dec rcx
+    add rdx, rcx ; oldLen + listLen - 1
+    dec rdx
+    
+    cmp rcx, 0
+    jle .prep_call ; no Args before List
+
+.push_args:
+    mov rax, PVAR(rcx) 
+    push rax 
+    cmp rcx, 1
+    je .prep_call
+    dec rcx
+    jmp .push_args
+
+.prep_call:
+    push rdx ; <newNumArgs>
+    mov rax, PVAR(0)
+    mov r9, [rax + TYPE_SIZE] ; env 
+    push r9 ; push
+    mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code 
+    push qword [rbp + 8] ; old ret addr
+    mov r15, qword[rbp] ; Save rbp
+    add rdx, 5 ; <newLen> + 5
+    
+    ; Macro Shift_Frame
+	push rax
+	mov r9, PARAM_COUNT ; prevLen + 5
+	mov rax, r9
+	add rax, 5
+    mov r11, 1
+    
+.shift: ; # <rdx> times
+	dec rax
+    mov r12, r11 ; idxLoop
+    shl r12, 3 
+    mov r13, rbp
+    sub r13, r12 ; rbp - 8 * idxLoop
+    mov r8, qword[r13]
+	mov [rbp + WORD_SIZE * rax], r8
+    cmp r11, rdx
+    je .end_shift
+    inc r11
+    jmp .shift
+
+.end_shift:
+	pop rax
+	mov r8, r9
+	add r8, 5
+	shl r8, 3
+	add rsp, r8 ; End Macro
+
+    mov rbp, r15 ; Restore rbp
+    jmp r10 ; code
+  
+.return:
+    leave
+    ret
+
+        
+cons:
+    push rbp
+    mov rbp, rsp
+
+    mov r8, PVAR(0) ; car
+    mov r9, PVAR(1) ; cdr
+    MAKE_PAIR (rax, r8, r9) ; pair into rax
+
+    jmp .return
+
+.return:
+    leave
+    ret 
+    
+
 car:
     push rbp
     mov rbp, rsp
@@ -89,6 +214,7 @@ car:
 .return:
     leave
     ret
+
 
 cdr:
     push rbp
@@ -102,6 +228,7 @@ cdr:
     leave
     ret
     
+
 set_car:
     push rbp
     mov rbp, rsp
@@ -119,6 +246,7 @@ set_car:
     leave
     ret
 
+
 set_cdr:
     push rbp
     mov rbp, rsp
@@ -135,20 +263,6 @@ set_cdr:
 .return:
     leave
     ret
-
-cons:
-    push rbp
-    mov rbp, rsp
-
-    mov r8, PVAR(0) ; car
-    mov r9, PVAR(1) ; cdr
-    MAKE_PAIR (rax, r8, r9) ; pair into rax
-
-    jmp .return
-
-.return:
-    leave
-    ret  
 ";;
 
 exception X_missing_input_file;;

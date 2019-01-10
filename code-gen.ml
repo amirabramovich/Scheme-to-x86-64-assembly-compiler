@@ -5,7 +5,7 @@ module type CODE_GEN = sig
   val make_fvars_tbl : expr' list -> (string * int) list
   val generate : (constant * (int * string)) list -> (string * int) list -> expr' -> string
 
-  (* TODO: sig funcs used in Compiler.ml, Check if Can stay it for submit *)
+  (* Added to Signature *)
   val get_const_addr : 'a -> ('a * ('b * 'c)) list -> 'b 
   val get_fvar_addr : 'a -> ('a * 'b) list -> 'b
   val primitive_names_to_labels : (string * string) list
@@ -27,7 +27,7 @@ module Code_Gen : CODE_GEN = struct
   let rec scan_ast asts consts = 
     match asts with
       | car :: cdr -> 
-        (match car with (* Amir fix T_47 *)
+        (match car with 
           | Const' Sexpr expr -> scan_ast cdr [expr] @ consts
           | Set' (expr1, expr2) | Def' (expr1, expr2) -> scan_ast cdr consts @ (scan_ast ([expr1] @ [expr2]) consts) 
           | If' (test, dit, dif) -> scan_ast cdr consts @ (scan_ast ([test] @ [dit] @ [dif]) consts) 
@@ -128,7 +128,6 @@ module Code_Gen : CODE_GEN = struct
 
   (* fvar table *)
   let rec scan_fvars asts fvars = 
-  (* TODO: check if add more cases *)
     match asts with
       | car :: cdr -> 
         (match car with
@@ -250,8 +249,7 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "jl .done_create_opt_list \n" ^
         "\t" ^ "mov r9, rax ; Caten to next List \n " ^
         "\t" ^ "jmp .create_opt_list \n" ^ 
-        (* ".check_bounds:  \n" ^ *)  
-        "\t" ^ "cmp r15, r13 \n" ^ (* TODO: check If Can Remove it *)
+        "\t" ^ "cmp r15, r13 \n" ^ 
         "\t" ^ "jne .create_opt_list \n\n " ^
         ".done_create_opt_list: \n" ^
         "\t" ^ "mov rax, r9 ; By default Nil \n" ^
@@ -391,7 +389,7 @@ module Code_Gen : CODE_GEN = struct
           let len = !prev_params in
           let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
           env_count := !env_count - 1; out
-      | Applic'(op, args) (* | ApplicTP'(op, args) *) -> 
+      | Applic'(op, args) -> 
           let args = List.rev args in 
           let len = List.length args in
           count := !count + 1;
@@ -404,8 +402,8 @@ module Code_Gen : CODE_GEN = struct
                 applic_rec cdr
               | [] -> 
                 "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; <nArgs> \n" ^ 
-                "\t" ^ "push " ^ (string_of_int len) ^ " ; parse <op> below: \n" ^
-                (generate consts fvars op) ^
+                "\t" ^ "push " ^ (string_of_int len) ^ " ; parse <op> below: \n\n" ^
+                (generate consts fvars op) ^ "\n" ^
                 "\t" ^ "mov rbx, [rax+TYPE_SIZE] ; env \n" ^
                 "\t" ^ "push rbx ; push env \n" ^
                 "\t" ^ "mov rbx, [rax+TYPE_SIZE+WORD_SIZE] ; code \n" ^
@@ -420,11 +418,9 @@ module Code_Gen : CODE_GEN = struct
           "\n\t" ^ "mov rax, 6666 ; applic \n" ^
           "\t" ^ "push rax ; 6666 As Magic, At the End of Args \n" ^
           (applic_rec args)
-      (* Notice: Two matches for ApplicTP' cuase to warning *) 
       | ApplicTP'(op, args) ->
           let args = List.rev args in 
           let len = List.length args in
-          (* prev_args := len; *)
           (* Helper function, for generate applic in tail position *)
           let rec applicTP_rec args =
             match args with
@@ -434,8 +430,8 @@ module Code_Gen : CODE_GEN = struct
                 applicTP_rec cdr
               | [] -> 
                 "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; <nArgs> \n" ^
-                "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below: \n" ^
-                (generate consts fvars op) ^
+                "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below: \n\n" ^
+                (generate consts fvars op) ^ "\n" ^
                 "\t" ^ "mov r9, [rax+TYPE_SIZE] ; env \n" ^
                 "\t" ^ "push r9 \n" ^
                 "\t" ^ "mov r10, [rax+TYPE_SIZE+WORD_SIZE] ; code \n" ^
@@ -449,7 +445,7 @@ module Code_Gen : CODE_GEN = struct
           "\t" ^ "mov rax, 6666 ; applic tail position \n" ^
           "\t" ^ "push rax ; 6666 As Magic, At the End of Args \n" ^
           (applicTP_rec args)
-      | _ -> raise X_not_yet_implemented;; (* TODO: check if all cases are checked. *)
+      | _ -> raise X_not_yet_implemented;; 
 
 end;;
 

@@ -67,16 +67,7 @@
  
  module Semantics : SEMANTICS = struct
  
-(*
-  22.12 update
-  Done:
-    .1. fix test 3 of course, rest of tests still passed.
-    .2. a bit order
 
-  TODO:
-   .1. Run struct_tests of the Course => fix tests if needed.
-   .2. Make order in code: try to make shorter and simpler (in functions, names, and more ..).
-*)
 
 (* Annotate lexical addresses, expr -> expr' *)
  let annotate_lexical_addresses e = 
@@ -224,7 +215,7 @@
    in
     
    (* findReads, got param and body => list of (closure, rib) of occurences *)
-   let rec findReads param body closure rib fatherParam = (* fatherParam ::= true, if param occur in father closure params *)    
+   let rec findReads param body closure rib fatherParam = 
      (* Helper function for nested Lambda *)
      let findLambda param params currBody rib = 
         if (List.mem param params) then [] 
@@ -258,7 +249,7 @@
      match body with
        | Set'(Var'(VarParam(v, pos)), value) -> if v = param then [closure, rib] else []
        | Set'(Var'(VarBound(v, depth, pos)), value) -> if v = param then [closure, rib] 
-                                                       else findWrites param value closure rib false (* nested set *)
+                                                       else findWrites param value closure rib false 
        | Set' (Var'(VarFree v), value) -> findWrites param value closure rib false
        | Seq' exprs | Or' exprs -> List.flatten (List.map (fun expr -> 
           findWrites param expr closure (getRib expr rib fatherParam) (getNextParam exprs expr fatherParam)) exprs)

@@ -223,10 +223,10 @@ dq %1
 ; from two pointers %3 and %4
 ; Stores result in register %1
 %macro MAKE_TWO_WORDS 4 
-        MALLOC %1, TYPE_SIZE+WORD_SIZE*2 ;it was WORD_BYTES in the source, not WORD_SIZE
+        MALLOC %1, TYPE_SIZE+WORD_SIZE*2 ; it was WORD_BYTES in the source, not WORD_SIZE
         mov byte [%1], %2
         mov qword [%1+TYPE_SIZE], %3
-        mov qword [%1+TYPE_SIZE+WORD_SIZE], %4 ;it was WORD_BYTES in the source, not WORD_SIZE
+        mov qword [%1+TYPE_SIZE+WORD_SIZE], %4 ; it was WORD_BYTES in the source, not WORD_SIZE
 %endmacro
 
 %macro MAKE_WORDS_LIT 3
@@ -307,7 +307,7 @@ write_sob_char:
 	mov rbp, rsp
 
 	CHAR_VAL rsi, rsi
-	and rsi, 255 ;TODO: check if remove
+	and rsi, 255
 
 	cmp rsi, CHAR_NUL
 	je .Lnul
@@ -539,7 +539,7 @@ section .data
 .fs_simple_char:
 	db "%c", 0
 .fs_hex_char:
-	db "\x%02x;", 0	
+	db "\x%02x 
 .fs_tab:
 	db "\t", 0
 .fs_page:
@@ -754,7 +754,7 @@ section .data
 .fs_simple_char:
 	db "%c", 0
 .fs_hex_char:
-	db "\x%02x ; ", 0
+	db "\x%02x 
 
 write_sob_closure:
 	push rbp

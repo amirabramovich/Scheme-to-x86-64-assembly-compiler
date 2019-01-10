@@ -52,10 +52,6 @@
  
  open PC;;
 
-(* TODO: 
-    .1. Fix test 11 Peleg
-    .2. Make code shorter & simpler
-*)
  
 (* Sexpr *)
 let _sexpr = 
@@ -401,7 +397,7 @@ let _sexpr =
     match list with
       | [] -> []
       (* got open paren *)
-      | '(' :: cdr | '[' :: cdr -> '(' :: (remove_dots cdr (num + 1)) (* 11.12 Change: merge 2 same matches input *)
+      | '(' :: cdr | '[' :: cdr -> '(' :: (remove_dots cdr (num + 1))
       | ')' :: cdr | ']' :: cdr -> ')' :: (remove_dots cdr (num - 1))
       (* Close with ... *)
       | car :: '.' :: '.' :: ['.'] -> [car] @ (add_parens num)
