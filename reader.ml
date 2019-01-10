@@ -52,10 +52,6 @@
  
  open PC;;
 
-(* TODO: 
-    .1. Fix test 11 Peleg
-    .2. Make code shorter & simpler
-*)
  
 (* Sexpr *)
 let _sexpr = 

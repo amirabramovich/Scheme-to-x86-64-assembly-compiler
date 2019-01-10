@@ -717,7 +717,10 @@ write_sob_symbol:
 	and rbx, 0xff
 
 	cmp rcx, rdx
-	jne .ch_simple
+	; jne .ch_simple ; D
+	cmp rbx, CHAR_SPACE ; C
+	jg .ch_simple ; C
+
 	cmp rbx, '+'
 	je .ch_hex
 	cmp rbx, '-'

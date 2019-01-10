@@ -67,16 +67,6 @@
  
  module Semantics : SEMANTICS = struct
  
-(*
-  22.12 update
-  Done:
-    .1. fix test 3 of course, rest of tests still passed.
-    .2. a bit order
-
-  TODO:
-   .1. Run struct_tests of the Course => fix tests if needed.
-   .2. Make order in code: try to make shorter and simpler (in functions, names, and more ..).
-*)
 
 (* Annotate lexical addresses, expr -> expr' *)
  let annotate_lexical_addresses e = 

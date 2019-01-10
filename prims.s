@@ -23,7 +23,6 @@ apply:
 
 .push_list:
     cmp r11, const_tbl+1 
-    ; je .end_push_list
     je .non_empty
 	CAR r10, r14
     CDR r11, r14
@@ -32,9 +31,6 @@ apply:
     inc rdx
     jmp .push_list
 
-; .end_push_list:
-;     cmp rdx, 1
-;     jne .non_empty
 
 .non_empty:
     mov r10, rsp

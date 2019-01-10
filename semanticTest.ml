@@ -1,3 +1,5 @@
+(* Remove From Submit *)
+
 (* semanticTest.ml
 * Tests for semantic-analyser.ml
 * Programmer: Nitsan Soffair and Amir Abramovich, 2018
