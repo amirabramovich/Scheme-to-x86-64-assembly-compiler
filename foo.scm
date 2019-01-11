@@ -7,7 +7,8 @@
 
 ; OfirTests
 ; sanity-bound-vars
-   (define x_0 0)
+   
+            (define x_0 0)
             (define x_1 1)
             (define x_2 2)
             (define x_3 3)
@@ -391,15 +392,22 @@
             (define x_381 381)
             (define x_382 382)
             (define x_383 383)
-
             (define x_384 384)
             (define x_385 385)
             (define x_386 386)
-
-            
-
-    
-    
+            (define x_387 387)
+            (define x_388 388)
+            (define x_389 389)
+            (define x_390 390)
+            (define x_391 391)
+            (define x_392 392)
+            (define x_393 393)
+            (define x_394 394)
+            (define x_395 395)
+            (define x_396 396)
+            (define x_397 397)
+            (define x_398 398)
+            (define x_399 399)     
 
             (set! x_0 -0)
             (set! x_1 -1)
@@ -785,12 +793,22 @@
             (set! x_381 -381)
             (set! x_382 -382)
             (set! x_383 -383)
-
             (set! x_384 -384)
             (set! x_385 -385)
             (set! x_386 -386)
-            
-
+            (set! x_387 -387)
+            (set! x_388 -388)
+            (set! x_389 -389)
+            (set! x_390 -390)
+            (set! x_391 -391)
+            (set! x_392 -392)
+            (set! x_393 -393)
+            (set! x_394 -394)
+            (set! x_395 -395)
+            (set! x_396 -396)
+            (set! x_397 -397)
+            (set! x_398 -398)
+            (set! x_399 -399)
 
             x_0
             x_1
@@ -1178,8 +1196,20 @@
             x_383
             x_384
             x_385
-
             x_386
+            x_387
+            x_388
+            x_389
+            x_390
+            x_391
+            x_392
+            x_393
+            x_394
+            x_395
+            x_396
+            x_397
+            x_398
+            x_399
             
       
      

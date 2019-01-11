@@ -98,15 +98,15 @@ module Code_Gen : CODE_GEN = struct
     match !consts with
       | car :: cdr -> 
         (match car with
-          | Bool _ | Nil -> cons_tbl (ref cdr) addr (* Next Call *)
+          | Bool _ | Nil -> cons_tbl (ref cdr) addr 
           | Char ch -> 
               glob_tbl := (!glob_tbl @ [(Sexpr(Char ch), (addr, "MAKE_LITERAL_CHAR(" ^ string_of_int (Char.code ch) ^ ") ; my address is " ^ 
-                  (string_of_int addr)))]); (* Update Glob Table *)
-                      cons_tbl (ref cdr) (addr + size_of car) (* Next Call *)
+                  (string_of_int addr)))]); 
+                      cons_tbl (ref cdr) (addr + size_of car) 
           | String str -> 
               glob_tbl := (!glob_tbl @ [(Sexpr(String str), (addr, "MAKE_LITERAL_STRING " ^ str_const str ^ " ; my address is " ^ 
-                  (string_of_int addr)))]);   (* Up Tbl *)
-                      cons_tbl (ref cdr) (addr + size_of car) (* NxtCall *)
+                  (string_of_int addr)))]);   
+                      cons_tbl (ref cdr) (addr + size_of car) 
           | Number(Int num) ->
               glob_tbl := (!glob_tbl @ [(Sexpr(Number(Int num)), (addr, "MAKE_LITERAL_INT(" ^ (string_of_int num) ^ ") ; my address is " ^
                   (string_of_int addr)))]);
@@ -147,14 +147,13 @@ module Code_Gen : CODE_GEN = struct
     match asts with
       | car :: cdr -> 
         (match car with
-          | Var'(VarFree expr) | BoxSet'(_, Var'(VarFree expr)) -> scan_fvars cdr [expr] @ fvars
+          | Var'(VarFree expr) | BoxSet'(_, Var'(VarFree expr)) -> scan_fvars cdr ([expr] @ fvars)
           | Def'(Var'(VarFree expr), _) -> scan_fvars cdr ([expr] @ fvars)
-          | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> scan_fvars cdr fvars @ (scan_fvars [body] fvars)
-          | Or' exprs | Seq' exprs -> scan_fvars cdr fvars @ List.concat ((List.map (fun expr -> scan_fvars [expr] fvars)) exprs)
-          | If' (test, dit, dif) -> scan_fvars cdr fvars @ scan_fvars [test; dit; dif] fvars
-          | Set'(_ , expr) -> scan_fvars cdr fvars @ scan_fvars [expr] fvars
-          | Applic' (op, exprs) | ApplicTP' (op, exprs) -> 
-              scan_fvars cdr fvars @ List.concat (List.map (fun expr -> scan_fvars [expr] fvars) ([op] @ exprs))
+          | LambdaSimple' (_, body) | LambdaOpt' (_, _, body) -> scan_fvars (cdr @ [body]) fvars
+          | Or' exprs | Seq' exprs -> scan_fvars (cdr @ exprs) fvars
+          | If' (test, dit, dif) -> scan_fvars (cdr @ [test; dit; dif]) fvars
+          | Set'(_ , expr) -> scan_fvars (cdr @ [expr]) fvars
+          | Applic' (op, exprs) | ApplicTP' (op, exprs) -> scan_fvars (cdr @ [op] @ exprs) fvars
           | _ -> scan_fvars cdr fvars)
       | _ -> fvars ;;
 
@@ -205,7 +204,7 @@ module Code_Gen : CODE_GEN = struct
         "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
       (* Helper function, for generate LambdaSimple *)
-      let assemLambda vars body curr_count curr_env len =
+      let assemLambda curr_count curr_env len =
         "lambdaSimple" ^ (string_of_int curr_count) ^ ":\n" ^ 
         "\t" ^ "MALLOC r10, 8 * (1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
         "\t" ^ "mov r11, r10 ; copy of ExtEnv address \n" ^
@@ -241,7 +240,7 @@ module Code_Gen : CODE_GEN = struct
         "\t" ^ "jmp Lcont" ^ (string_of_int curr_count) ^ "\n" in
 
       (* Helper function for Lcode of LambdaOpt *)
-      let lcodeOpt vars opt body curr_count = 
+      let lcodeOpt vars body curr_count = 
         prev_params := Pervasives.max (!prev_params) ((List.length vars) + 1); 
         let len = List.length vars in
         (* Explain: to Get Rev Args, Start by Count |<OptList>|, and then, caten Pairs from <EndOptList> to <StartOptList> *)
@@ -280,7 +279,7 @@ module Code_Gen : CODE_GEN = struct
         "Lcont" ^ (string_of_int curr_count) ^ ":\n" in
 
       (* Helper function, for generate LambdaOpt *)
-      let assemOpt vars opt body curr_count curr_env len = 
+      let assemOpt vars curr_count curr_env len = 
         "\nlambdaOpt" ^ (string_of_int curr_count) ^ ":\n" ^ 
         "\t" ^ "mov rsi, " ^ (string_of_int (List.length vars)) ^ " ; Store <nParams> in rsi \n" ^
         "\t" ^ "MALLOC r10, 8 * (1 + " ^ (string_of_int curr_env) ^ ") ; Allocate ExtEnv\n" ^
@@ -346,11 +345,11 @@ module Code_Gen : CODE_GEN = struct
           let current = !count in
           count := !count + 1;
           (* Helper function to generate Or' *)
-          let or_gen consts fvars expr =
+          let assemOr consts fvars expr =
             (generate consts fvars expr) ^ 
             "\t" ^ "cmp rax, SOB_FALSE_ADDRESS" ^ "\n" ^
             "\t" ^ "jne LexitOr" ^ (string_of_int current) ^ "\n" in
-          String.concat "\n" (List.map (or_gen consts fvars) exprs) ^
+          String.concat "\n" (List.map (assemOr consts fvars) exprs) ^
           "\n\t" ^ "LexitOr" ^ (string_of_int current) ^ ":\n"
       | If'(test, dit, dif) -> 
           let current = !count in
@@ -395,26 +394,26 @@ module Code_Gen : CODE_GEN = struct
           count := !count + 1;
           env_count := !env_count + 1;
           let len = !prev_params in
-          let out = "\n" ^ (assemLambda vars body curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
+          let out = "\n" ^ (assemLambda curr_count curr_env len) ^ (lcodeSimple vars body curr_count) in
           env_count := !env_count - 1; out
       | LambdaOpt'(vars, opt, body) -> 
           let (curr_count, curr_env) = (!count, !env_count) in
           count := !count + 1;
           env_count := !env_count + 1;
           let len = !prev_params in
-          let out = "\n" ^ (assemOpt vars opt body curr_count curr_env len) ^ (lcodeOpt vars opt body curr_count) in
+          let out = "\n" ^ (assemOpt vars curr_count curr_env len) ^ (lcodeOpt vars body curr_count) in
           env_count := !env_count - 1; out
       | Applic'(op, args) -> 
           let args = List.rev args in 
           let len = List.length args in
           count := !count + 1;
           (* Helper function, for generate applic *)
-          let rec applic_rec args =
+          let rec assemApplic args =
             match args with
               | car :: cdr -> 
                 (generate consts fvars car) ^
                 "\t" ^ "push rax \n" ^ 
-                applic_rec cdr
+                assemApplic cdr
               | [] -> 
                 "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; <nArgs> \n" ^ 
                 "\t" ^ "push " ^ (string_of_int len) ^ " ; parse <op> below: \n" ^
@@ -432,17 +431,17 @@ module Code_Gen : CODE_GEN = struct
           (* Explain use: push 6666 Magic at end, sign for EndArgs of LambdaOpt *)
           "\n\t" ^ "mov rax, 6666 ; applic \n" ^
           "\t" ^ "push rax ; 6666 As Magic, At the End of Args \n" ^
-          (applic_rec args)
+          (assemApplic args)
       | ApplicTP'(op, args) ->
           let args = List.rev args in 
           let len = List.length args in
           (* Helper function, for generate applic in tail position *)
-          let rec applicTP_rec args =
+          let rec assemTP args =
             match args with
               | car :: cdr -> 
                 (generate consts fvars car) ^ 
                 "\t" ^ "push rax \n" ^ 
-                applicTP_rec cdr
+                assemTP cdr
               | [] -> 
                 "\t" ^ "mov rcx, " ^ (string_of_int len) ^ " ; <nArgs> \n" ^
                 "\t" ^ "push " ^ (string_of_int len) ^ " ; parsing of operator below: \n" ^
@@ -459,7 +458,7 @@ module Code_Gen : CODE_GEN = struct
           (* Explain use: push 6666 Magic at end, sign for EndArgs of LambdaOpt *)
           "\t" ^ "mov rax, 6666 ; applic tail position \n" ^
           "\t" ^ "push rax ; 6666 As Magic, At the End of Args \n" ^
-          (applicTP_rec args)
+          (assemTP args)
       | _ -> raise X_not_yet_implemented;;
 
 end;;

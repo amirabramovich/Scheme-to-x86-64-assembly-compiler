@@ -42,7 +42,7 @@ const_tbl:
 %define SOB_TRUE_ADDRESS " ^ get_const_address (Sexpr (Bool true)) ^ "
 
 fvar_tbl:
-" ^ (String.concat "\n" (List.map (fun (str,index) -> "dq T_UNDEFINED ; i'm " ^ str ^ ", my address is " ^ string_of_int index) fvars_tbl)) ^ "
+" ^ (String.concat "\n" (List.map (fun (str, index) -> "dq T_UNDEFINED ; i'm " ^ str ^ ", my address is " ^ string_of_int index) fvars_tbl)) ^ "
 
 global main
 section .text
@@ -51,7 +51,7 @@ main:
     mov rbp, rsp
 
     ;; set up the heap
-    mov rdi, MB(100) ; TODO: Change Back to GB(4) Before Submit
+    mov rdi, GB(4) 
     call malloc
     mov [malloc_pointer], rax
 
@@ -82,8 +82,8 @@ car:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(0) ; rsi got pair
-	CAR rax, rsi ; rax got car
+    mov rsi, PVAR(0) ; rsi Got Pair
+	CAR rax, rsi ; rax Got Car
     jmp .return
 
 .return:
@@ -106,11 +106,11 @@ set_car:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(1) ; rsi got new car
-    mov r8, PVAR(0) ; qword of pair
-    add r8, 1 ; r8 is car loc
+    mov rsi, PVAR(1) ; rsi Got New Car
+    mov r8, PVAR(0) ; Pair
+    add r8, 1 ; Car loc
     mov [r8], rsi
-    mov r9, qword [r8] ; r9 is car val
+    mov r9, qword [r8] ; r9 is Car Val
 
     mov rax, SOB_VOID_ADDRESS
     jmp .return
@@ -123,11 +123,11 @@ set_cdr:
     push rbp
     mov rbp, rsp
 
-    mov rsi, PVAR(1) ; rsi got new car
-    mov r8, PVAR(0) ; qword of pair
-    add r8, 9 ; r8 is cdr loc
+    mov rsi, PVAR(1) ; rsi Got New Cdr
+    mov r8, PVAR(0) ; Pair
+    add r8, 9 ; Cdr loc
     mov [r8], rsi
-    mov r9, qword [r8] ; r9 is car val
+    mov r9, qword [r8] ; r9 is Cdr Val
 
     mov rax, SOB_VOID_ADDRESS
     jmp .return
@@ -140,9 +140,9 @@ cons:
     push rbp
     mov rbp, rsp
 
-    mov r8, PVAR(0) ; car
-    mov r9, PVAR(1) ; cdr
-    MAKE_PAIR (rax, r8, r9) ; pair into rax
+    mov r8, PVAR(0) ; Car
+    mov r9, PVAR(1) ; Cdr
+    MAKE_PAIR (rax, r8, r9) ; Pair Into rax
 
     jmp .return
 
